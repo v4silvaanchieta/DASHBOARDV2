@@ -22,11 +22,11 @@ export default function SalesFunnelChart({ data }) {
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-sm font-semibold text-slate-900">
+      <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
         Funil de Vendas Consolidado
       </h2>
-      <p className="mb-4 text-xs text-slate-500">
-        Contagem de leads por estágio
+      <p className="mb-4 mt-0.5 text-xs text-slate-400">
+        Contagem de deals por estágio
       </p>
 
       {hasData ? (

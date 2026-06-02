@@ -1,14 +1,16 @@
 "use client";
 
 /**
- * Card de KPI genérico (Etapa 3).
+ * Card de KPI premium (Etapa 6).
+ * Sempre fundo branco, borda suave e sombra leve — sem cores pastel de fundo.
+ * O `accent` colore apenas o chip do ícone.
  *
  * @param {{
  *   label: string,
  *   value: string | number,
  *   icon?: string,
  *   hint?: string,
- *   tone?: "default" | "danger" | "success",
+ *   accent?: "slate" | "emerald" | "red" | "indigo" | "amber",
  * }} props
  */
 export default function KpiCard({
@@ -16,44 +18,34 @@ export default function KpiCard({
   value,
   icon,
   hint,
-  tone = "default",
+  accent = "slate",
 }) {
-  const tones = {
-    default: {
-      card: "border-slate-200 bg-white",
-      value: "text-slate-900",
-      iconBg: "bg-slate-100 text-slate-600",
-    },
-    danger: {
-      card: "border-red-200 bg-red-50",
-      value: "text-red-700",
-      iconBg: "bg-red-100 text-red-600",
-    },
-    success: {
-      card: "border-emerald-200 bg-emerald-50",
-      value: "text-emerald-700",
-      iconBg: "bg-emerald-100 text-emerald-600",
-    },
+  const accents = {
+    slate: "bg-slate-100 text-slate-600",
+    emerald: "bg-emerald-50 text-emerald-600",
+    red: "bg-red-50 text-red-600",
+    indigo: "bg-indigo-50 text-indigo-600",
+    amber: "bg-amber-50 text-amber-600",
   };
 
-  const t = tones[tone] ?? tones.default;
+  const iconClass = accents[accent] ?? accents.slate;
 
   return (
-    <div className={`rounded-xl border ${t.card} p-5 shadow-sm`}>
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between">
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
           {label}
         </p>
         {icon && (
           <span
-            className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm ${t.iconBg}`}
+            className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm ${iconClass}`}
             aria-hidden="true"
           >
             {icon}
           </span>
         )}
       </div>
-      <p className={`mt-3 text-2xl font-bold tracking-tight ${t.value}`}>
+      <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
         {value}
       </p>
       {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}

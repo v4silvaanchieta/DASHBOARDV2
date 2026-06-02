@@ -17,10 +17,10 @@ const MENU_ITEMS = [
 
 export default function Sidebar() {
   return (
-    <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-slate-900 text-slate-200">
+    <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-slate-950 text-slate-300">
       {/* Logo / Marca */}
-      <div className="flex items-center gap-3 h-16 px-6 border-b border-slate-800">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-velot text-white font-bold">
+      <div className="flex items-center gap-3 h-16 px-6 border-b border-slate-800/80">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-slate-950 font-bold">
           V
         </div>
         <span className="text-lg font-semibold tracking-tight text-white">
@@ -38,8 +38,8 @@ export default function Sidebar() {
                 className={[
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   item.active
-                    ? "bg-velot text-white"
-                    : "text-slate-300 hover:bg-slate-800 hover:text-white",
+                    ? "bg-slate-800 text-white"
+                    : "text-slate-400 hover:bg-slate-900 hover:text-white",
                 ].join(" ")}
               >
                 <span className="text-base" aria-hidden="true">
@@ -53,7 +53,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Rodapé da sidebar */}
-      <div className="border-t border-slate-800 px-6 py-4 text-xs text-slate-500">
+      <div className="border-t border-slate-800/80 px-6 py-4 text-xs text-slate-500">
         © {new Date().getFullYear()} Velot
       </div>
     </aside>

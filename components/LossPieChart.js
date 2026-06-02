@@ -22,10 +22,10 @@ export default function LossPieChart({ analysis }) {
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-sm font-semibold text-slate-900">
+      <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
         Análise de Perdas
       </h2>
-      <p className="mb-4 text-xs text-slate-500">
+      <p className="mb-4 mt-0.5 text-xs text-slate-400">
         Motivos de perda · base para repescagem de consórcio
       </p>
 
@@ -67,11 +67,11 @@ export default function LossPieChart({ analysis }) {
           </div>
 
           {/* Faturamento Perdido */}
-          <div className="sm:col-span-2 rounded-lg border border-red-100 bg-red-50 p-4 text-center">
-            <p className="text-xs font-medium uppercase tracking-wide text-red-500">
+          <div className="sm:col-span-2 rounded-lg border border-slate-200 bg-white p-4 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Faturamento Perdido
             </p>
-            <p className="mt-2 text-2xl font-bold text-red-700">
+            <p className="mt-2 text-2xl font-bold text-red-600">
               {formatBRL(totalLost)}
             </p>
             <p className="mt-1 text-xs text-slate-500">

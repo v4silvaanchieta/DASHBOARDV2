@@ -24,9 +24,14 @@ import {
   computeCampaignPerformance,
   computeAiEfficiency,
 } from "@/lib/marketing";
+import SourceCrossSection from "@/components/SourceCrossSection";
+import {
+  computeStoreGeneration,
+  computeMatrizVsUnidade,
+} from "@/lib/crossref";
 
 export default function DashboardPage() {
-  const { data, loading, error, lastUpdated } = useDashboardData();
+  const { data, leadsSdr, loading, error, lastUpdated } = useDashboardData();
 
   // Estado dos filtros (Etapa 2).
   const [filters, setFilters] = useState({
@@ -76,6 +81,16 @@ export default function DashboardPage() {
     [filteredData]
   );
 
+  // Cruzamento entre abas (Etapa 6): SDR -> DEALS e Matriz vs Unidades.
+  const generation = useMemo(
+    () => computeStoreGeneration(leadsSdr, filteredData),
+    [leadsSdr, filteredData]
+  );
+  const matrizVsUnidade = useMemo(
+    () => computeMatrizVsUnidade(filteredData),
+    [filteredData]
+  );
+
   return (
     <>
       <Header title="Visão Geral" lastUpdated={lastUpdated} />
@@ -110,54 +125,74 @@ export default function DashboardPage() {
         {!loading && !error && (
           <>
             {/* Cards superiores — Visão Geral de Negócios */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <KpiCard
-                label="Faturamento"
+                label="Entrada SDR IA"
+                value={leadsSdr.length.toLocaleString("pt-BR")}
+                icon="🤖"
+                accent="indigo"
+                hint="Total de linhas da aba LEADS SDR"
+              />
+              <KpiCard
+                label="Leads (Deals)"
+                value={metrics.leadsGerados.toLocaleString("pt-BR")}
+                icon="👥"
+                hint="Total de deals filtrados"
+              />
+              <KpiCard
+                label="Faturamento Realizado"
                 value={formatBRL(metrics.faturamento)}
                 icon="💰"
-                tone="success"
+                accent="emerald"
                 hint="Soma de QUANTIA · STATUS ganho"
               />
               <KpiCard
-                label="Leads Gerados"
-                value={metrics.leadsGerados.toLocaleString("pt-BR")}
-                icon="👥"
-                hint="Total de leads filtrados"
-              />
-              <KpiCard
-                label="Leads Parados"
-                value={metrics.leadsParados.toLocaleString("pt-BR")}
-                icon="⏳"
-                tone="danger"
-                hint="Etapa inicial há mais de 24h"
+                label="Faturamento Perdido"
+                value={formatBRL(metrics.faturamentoPerdido)}
+                icon="💸"
+                accent="red"
+                hint="Soma de QUANTIA · STATUS perdido"
               />
               <KpiCard
                 label="Vendas Realizadas"
                 value={metrics.vendasRealizadas.toLocaleString("pt-BR")}
                 icon="✅"
-                tone="success"
+                accent="emerald"
                 hint="STATUS ganho"
               />
               <KpiCard
                 label="Vendas Perdidas"
                 value={metrics.vendasPerdidas.toLocaleString("pt-BR")}
                 icon="❌"
-                tone="danger"
+                accent="red"
                 hint="STATUS perdido"
+              />
+              <KpiCard
+                label="Leads Parados"
+                value={metrics.leadsParados.toLocaleString("pt-BR")}
+                icon="⏳"
+                accent="amber"
+                hint="Etapa inicial há mais de 24h"
               />
               <KpiCard
                 label="Taxa de Conversão"
                 value={`${metrics.taxaConversao.toFixed(1).replace(".", ",")}%`}
                 icon="📈"
-                hint="Vendas / Leads Gerados"
+                hint="Vendas / Deals filtrados"
               />
             </div>
+
+            {/* Cruzamento entre abas: Unidade vs Matriz + Geração por Loja */}
+            <SourceCrossSection
+              generation={generation}
+              matrizVsUnidade={matrizVsUnidade}
+            />
 
             {/* Card de Gestão de SLA (Speed to Lead) */}
             <SlaCard sla={sla} />
 
             {/* Gráficos: Funil de Vendas + Análise de Perdas (lado a lado) */}
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <SalesFunnelChart data={funnelData} />
               <LossPieChart analysis={lossAnalysis} />
             </div>

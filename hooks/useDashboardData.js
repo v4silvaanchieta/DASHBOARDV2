@@ -1,30 +1,35 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { fetchData, CSV_URL } from "@/lib/fetchData";
+import { fetchAllSources } from "@/lib/fetchData";
 
 /** Intervalo de atualização automática (near real-time), em milissegundos. */
 export const REFRESH_INTERVAL_MS = 60_000;
 
 /**
- * Custom hook que faz o fetch do CSV no client-side e o atualiza automaticamente
- * a cada 60s (near real-time) com quebra de cache.
+ * Custom hook que busca as 3 abas (LEADS SDR, MOVIMENTAÇÃO, DEALS) em paralelo
+ * e as atualiza automaticamente a cada 60s (near real-time) com quebra de cache.
  *
- * @param {string} [url=CSV_URL]
+ * Retorna `data` = aba DEALS (fonte primária dos filtros/KPIs), além de
+ * `leadsSdr` e `movimentacao` para os cruzamentos.
+ *
  * @returns {{
  *   data: Array<Record<string, any>>,
+ *   leadsSdr: Array<Record<string, any>>,
+ *   movimentacao: Array<Record<string, any>>,
  *   loading: boolean,
  *   error: Error|null,
  *   lastUpdated: Date|null,
  * }}
  */
-export function useDashboardData(url = CSV_URL) {
+export function useDashboardData() {
   const [data, setData] = useState([]);
+  const [leadsSdr, setLeadsSdr] = useState([]);
+  const [movimentacao, setMovimentacao] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
 
-  // Evita atualizar estado após desmontar e controla o loading só na 1ª carga.
   const isMountedRef = useRef(true);
   const isFirstLoadRef = useRef(true);
 
@@ -32,13 +37,14 @@ export function useDashboardData(url = CSV_URL) {
     isMountedRef.current = true;
 
     const load = () => {
-      // Só exibe o spinner na primeira carga; as atualizações são silenciosas.
       if (isFirstLoadRef.current) setLoading(true);
 
-      fetchData(url)
-        .then((rows) => {
+      fetchAllSources()
+        .then(({ deals, movimentacao: mov, leadsSdr: sdr }) => {
           if (!isMountedRef.current) return;
-          setData(rows);
+          setData(deals);
+          setMovimentacao(mov);
+          setLeadsSdr(sdr);
           setError(null);
           setLastUpdated(new Date());
         })
@@ -54,7 +60,6 @@ export function useDashboardData(url = CSV_URL) {
         });
     };
 
-    // Carga inicial + polling a cada 60s.
     load();
     const intervalId = setInterval(load, REFRESH_INTERVAL_MS);
 
@@ -62,9 +67,9 @@ export function useDashboardData(url = CSV_URL) {
       isMountedRef.current = false;
       clearInterval(intervalId);
     };
-  }, [url]);
+  }, []);
 
-  return { data, loading, error, lastUpdated };
+  return { data, leadsSdr, movimentacao, loading, error, lastUpdated };
 }
 
 export default useDashboardData;

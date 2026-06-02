@@ -33,10 +33,10 @@ export default function MarketingSection({
   return (
     <section className="space-y-6">
       <div>
-        <h2 className="text-base font-semibold text-slate-900">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
           Performance de Marketing
         </h2>
-        <p className="text-xs text-slate-500">
+        <p className="mt-0.5 text-xs text-slate-400">
           Visão por fonte, campanha e eficiência da IA
         </p>
       </div>
@@ -44,7 +44,7 @@ export default function MarketingSection({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Tabela de Performance por Campanha */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
-          <h3 className="mb-4 text-sm font-semibold text-slate-900">
+          <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
             Performance por Campanha
           </h3>
           {campaigns.length > 0 ? (
@@ -97,11 +97,11 @@ export default function MarketingSection({
         {/* Coluna lateral: Eficiência da IA + CPL/ROI */}
         <div className="space-y-6">
           {/* Card Eficiência da IA */}
-          <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Eficiência da IA (SDR IA)
             </h3>
-            <p className="mt-3 text-3xl font-bold text-velot">
+            <p className="mt-3 text-3xl font-bold text-slate-900">
               {fmtPct(aiEfficiency.efficiency)}
             </p>
             <p className="mt-1 text-xs text-slate-500">
@@ -112,7 +112,7 @@ export default function MarketingSection({
 
           {/* Placeholders CPL e ROI */}
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Investimento (mock)
             </h3>
             <label className="mt-3 block">

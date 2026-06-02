@@ -15,10 +15,10 @@ export default function StoreHygieneTable({ rows }) {
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-sm font-semibold text-slate-900">
+      <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
         Higiene do CRM e Adoção
       </h2>
-      <p className="mb-4 text-xs text-slate-500">
+      <p className="mb-4 mt-0.5 text-xs text-slate-400">
         Score de qualidade do cadastro por loja (0–100)
       </p>
 
