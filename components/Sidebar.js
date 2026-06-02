@@ -17,19 +17,19 @@ export const MENU_ITEMS = [
   { id: "configuracoes", label: "Configurações", icon: "⚙️" },
 ];
 
-const LOGO_LIGHT =
-  "https://github.com/v4silvaanchieta/DASHBOARDV2/blob/main/velot-cor-2.png?raw=true";
-const LOGO_DARK =
+// A sidebar é sempre escura (nos dois temas), então usamos sempre o logo
+// para fundo escuro (claro/branco) para garantir contraste e visibilidade.
+const LOGO_ON_DARK =
   "https://github.com/v4silvaanchieta/DASHBOARDV2/blob/main/velot-cor-1.png?raw=true";
 
 export default function Sidebar({ activeTab, onSelect, theme = "light" }) {
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-slate-950 text-slate-300 md:border-r md:border-slate-800/80">
-      {/* Logo / Marca (alterna conforme o tema) */}
+      {/* Logo / Marca (sidebar sempre escura -> logo claro nos dois temas) */}
       <div className="flex items-center h-16 px-6 border-b border-slate-800/80">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={theme === "dark" ? LOGO_DARK : LOGO_LIGHT}
+          src={LOGO_ON_DARK}
           alt="Velot"
           className="h-8 w-auto object-contain"
         />
