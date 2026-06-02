@@ -70,23 +70,23 @@ export default function RelatoriosTab({ data }) {
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
+      <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
         Relatórios · Exportação
       </h2>
-      <p className="mb-4 mt-0.5 text-xs text-slate-400">
+      <p className="mb-4 mt-0.5 text-xs text-slate-400 dark:text-slate-500">
         Selecione o período e copie os dados (CSV) para conciliar com a Intranet Apolo
       </p>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
         <label className="flex flex-col gap-1.5 sm:w-64">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Período (Data de Criação)
           </span>
           <select
             value={range}
             onChange={(e) => setRange(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-velot focus:outline-none focus:ring-1 focus:ring-velot"
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-velot focus:outline-none focus:ring-1 focus:ring-velot dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           >
             {DATE_RANGE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -100,14 +100,14 @@ export default function RelatoriosTab({ data }) {
           type="button"
           onClick={handleCopy}
           disabled={rows.length === 0}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-velot px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-velot-dark disabled:cursor-not-allowed disabled:opacity-40"
         >
           {copied ? "✅ Copiado!" : "📋 Copiar Dados (Clipboard)"}
         </button>
       </div>
 
-      <p className="mt-4 text-sm text-slate-600">
-        <span className="font-semibold text-slate-900">
+      <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">
+        <span className="font-semibold text-slate-900 dark:text-slate-50">
           {rows.length.toLocaleString("pt-BR")}
         </span>{" "}
         registros prontos para exportação ·{" "}

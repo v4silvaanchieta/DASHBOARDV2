@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: "class",
   content: [
     "./app/**/*.{js,jsx}",
     "./components/**/*.{js,jsx}",
@@ -8,10 +9,11 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Cor oficial da marca Velot (vermelho).
         velot: {
-          DEFAULT: "#4f46e5",
-          dark: "#4338ca",
-          light: "#6366f1",
+          DEFAULT: "#DC0032",
+          dark: "#B30029",
+          light: "#F11A4D",
         },
       },
       fontFamily: {

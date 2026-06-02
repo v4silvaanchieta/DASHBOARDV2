@@ -32,20 +32,20 @@ export default function ConfiguracoesTab({ settings, onChange }) {
     });
 
   const inputClass =
-    "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-velot focus:outline-none focus:ring-1 focus:ring-velot";
+    "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-velot focus:outline-none focus:ring-1 focus:ring-velot dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100";
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Meta de SLA */}
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
           Gestão de SLA
         </h2>
-        <p className="mb-4 mt-0.5 text-xs text-slate-400">
+        <p className="mb-4 mt-0.5 text-xs text-slate-400 dark:text-slate-500">
           Tempo máximo de primeiro atendimento (Speed to Lead)
         </p>
         <label className="block">
-          <span className="text-sm font-medium text-slate-600">
+          <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
             Meta de SLA (minutos)
           </span>
           <input
@@ -55,22 +55,26 @@ export default function ConfiguracoesTab({ settings, onChange }) {
             onChange={(e) => setSla(e.target.value)}
             className={`mt-1 ${inputClass}`}
           />
-          <span className="mt-1 block text-xs text-slate-400">Padrão: 5 minutos</span>
+          <span className="mt-1 block text-xs text-slate-400 dark:text-slate-500">
+            Padrão: 5 minutos
+          </span>
         </label>
       </div>
 
       {/* Pontos de punição do Score */}
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
           Score Comercial · Punições
         </h2>
-        <p className="mb-4 mt-0.5 text-xs text-slate-400">
+        <p className="mb-4 mt-0.5 text-xs text-slate-400 dark:text-slate-500">
           Pontos deduzidos por ocorrência (loja inicia com 100)
         </p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {PENALTY_FIELDS.map(([key, label]) => (
             <label key={key} className="block">
-              <span className="text-sm font-medium text-slate-600">{label}</span>
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                {label}
+              </span>
               <input
                 type="number"
                 min={0}

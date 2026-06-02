@@ -12,19 +12,27 @@ export default function SlaCard({ sla }) {
   const { avgMinutes, sampleSize, waitingCount, withinTarget } = sla;
   const target = sla.targetMinutes ?? SLA_TARGET_MINUTES;
 
-  const valueColor = withinTarget ? "text-emerald-600" : "text-red-600";
+  const valueColor = withinTarget
+    ? "text-emerald-600 dark:text-emerald-400"
+    : "text-red-600 dark:text-red-400";
   const badge = withinTarget
-    ? { cls: "bg-emerald-50 text-emerald-700", text: "Dentro do SLA" }
-    : { cls: "bg-red-50 text-red-700", text: "Fora do SLA" };
+    ? {
+        cls: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
+        text: "Dentro do SLA",
+      }
+    : {
+        cls: "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400",
+        text: "Fora do SLA",
+      };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Gestão de SLA · Speed to Lead
           </p>
-          <p className="mt-0.5 text-xs text-slate-400">
+          <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
             Pré-Qualificação (SDR/IA) → Novos Leads · meta &lt; {target} min
           </p>
         </div>
@@ -36,15 +44,17 @@ export default function SlaCard({ sla }) {
       <p className={`mt-3 text-3xl font-bold tracking-tight ${valueColor}`}>
         {sampleSize > 0 ? formatDuration(avgMinutes) : "—"}
       </p>
-      <p className="mt-1 text-xs text-slate-500">
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
         Tempo médio de resposta · base de {sampleSize}{" "}
         {sampleSize === 1 ? "lead atendido" : "leads atendidos"}
       </p>
 
-      <div className="mt-4 border-t border-slate-100 pt-3">
+      <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
         <p
           className={`text-sm font-medium ${
-            waitingCount > 0 ? "text-red-600" : "text-slate-500"
+            waitingCount > 0
+              ? "text-red-600 dark:text-red-400"
+              : "text-slate-500 dark:text-slate-400"
           }`}
         >
           Alerta: {waitingCount} leads aguardando atendimento

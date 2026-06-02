@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Sidebar, { MENU_ITEMS } from "@/components/Sidebar";
 import Header from "@/components/Header";
 import FilterBar from "@/components/FilterBar";
@@ -46,6 +46,31 @@ export default function DashboardPage() {
 
   // Navegação por abas (React Tabs) — mantém dados em memória + polling ativo.
   const [activeTab, setActiveTab] = useState("visao-geral");
+
+  // Tema claro/escuro (apenas layout — não afeta dados/cálculos).
+  const [theme, setTheme] = useState("light");
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("velot-theme");
+      if (stored === "dark" || stored === "light") {
+        setTheme(stored);
+        return;
+      }
+    } catch {}
+    if (window.matchMedia?.("(prefers-color-scheme: dark)").matches) {
+      setTheme("dark");
+    }
+  }, []);
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "dark") root.classList.add("dark");
+    else root.classList.remove("dark");
+    try {
+      localStorage.setItem("velot-theme", theme);
+    } catch {}
+  }, [theme]);
+  const isDark = theme === "dark";
+  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
   // Configurações ajustáveis (aba Configurações).
   const [settings, setSettings] = useState({
@@ -107,10 +132,15 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Sidebar activeTab={activeTab} onSelect={setActiveTab} />
+      <Sidebar activeTab={activeTab} onSelect={setActiveTab} theme={theme} />
 
       <div className="min-h-screen md:pl-64">
-        <Header title={activeLabel} lastUpdated={lastUpdated} />
+        <Header
+          title={activeLabel}
+          lastUpdated={lastUpdated}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
 
         <main className="space-y-6 p-6">
           {/* Filtros globais — sempre no topo, afetam todas as abas */}
@@ -122,8 +152,8 @@ export default function DashboardPage() {
             disabled={loading}
           />
           {!loading && !error && (
-            <p className="-mt-3 text-xs text-slate-500">
-              <span className="font-semibold text-slate-700">
+            <p className="-mt-3 text-xs text-slate-500 dark:text-slate-400">
+              <span className="font-semibold text-slate-700 dark:text-slate-200">
                 {filteredData.length.toLocaleString("pt-BR")}
               </span>{" "}
               deals após filtros · {data.length.toLocaleString("pt-BR")} no total
@@ -131,17 +161,17 @@ export default function DashboardPage() {
           )}
 
           {loading && (
-            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-velot" />
-              <span className="text-sm font-medium text-slate-600">
+            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-velot dark:border-slate-700 dark:border-t-velot" />
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
                 Carregando dados da planilha...
               </span>
             </div>
           )}
 
           {!loading && error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-6">
-              <p className="text-sm font-medium text-red-700">
+            <div className="rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-500/30 dark:bg-red-500/10">
+              <p className="text-sm font-medium text-red-700 dark:text-red-400">
                 Erro ao carregar os dados: {error.message}
               </p>
             </div>
@@ -214,8 +244,8 @@ export default function DashboardPage() {
                   <SlaCard sla={sla} />
 
                   <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    <SalesFunnelChart data={funnelData} />
-                    <LossPieChart analysis={lossAnalysis} />
+                    <SalesFunnelChart data={funnelData} isDark={isDark} />
+                    <LossPieChart analysis={lossAnalysis} isDark={isDark} />
                   </div>
                 </>
               )}
@@ -235,7 +265,9 @@ export default function DashboardPage() {
               )}
 
               {/* === PRODUTOS === */}
-              {activeTab === "produtos" && <ProdutosTab products={products} />}
+              {activeTab === "produtos" && (
+                <ProdutosTab products={products} isDark={isDark} />
+              )}
 
               {/* === CAMPANHAS (Marketing) === */}
               {activeTab === "campanhas" && (

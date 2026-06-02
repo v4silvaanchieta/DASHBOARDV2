@@ -18,26 +18,31 @@ import { formatBRL } from "@/lib/metrics";
  *
  * @param {{ products: { byModel: Array<{ model: string, total: number, count: number }>, infraCount: number, totalGanho: number } }} props
  */
-export default function ProdutosTab({ products }) {
+export default function ProdutosTab({ products, isDark = false }) {
   const { byModel, infraCount, totalGanho } = products;
   const top = byModel.slice(0, 12);
+  const tickColor = isDark ? "#94a3b8" : "#475569";
+  const labelColor = isDark ? "#e2e8f0" : "#334155";
+  const tooltipStyle = isDark
+    ? { backgroundColor: "#0f172a", border: "1px solid #334155", color: "#e2e8f0" }
+    : { backgroundColor: "#ffffff", border: "1px solid #e2e8f0", color: "#0f172a" };
 
   return (
     <div className="space-y-6">
       {/* Alerta de Infrações */}
       <div
-        className={`rounded-xl border p-5 shadow-sm ${
+        className={`rounded-xl border bg-white p-5 shadow-sm transition-colors dark:bg-slate-900 ${
           infraCount > 0
-            ? "border-rose-200 bg-white"
-            : "border-slate-200 bg-white"
+            ? "border-rose-200 dark:border-rose-500/30"
+            : "border-slate-200 dark:border-slate-800"
         }`}
       >
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Alerta de Infrações · Ganhos sem Valor
             </h2>
-            <p className="mt-0.5 text-xs text-slate-400">
+            <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
               Vendas "Ganho" com QUANTIA zerada (catálogo de produtos não utilizado)
             </p>
           </div>
@@ -47,22 +52,24 @@ export default function ProdutosTab({ products }) {
         </div>
         <p
           className={`mt-3 text-3xl font-bold ${
-            infraCount > 0 ? "text-rose-600" : "text-emerald-600"
+            infraCount > 0
+              ? "text-rose-600 dark:text-rose-400"
+              : "text-emerald-600 dark:text-emerald-400"
           }`}
         >
           {infraCount.toLocaleString("pt-BR")}
         </p>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
           Faturamento total catalogado: {formatBRL(totalGanho)}
         </p>
       </div>
 
       {/* Faturamento por Modelo */}
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
           Faturamento por Modelo
         </h2>
-        <p className="mb-4 mt-0.5 text-xs text-slate-400">
+        <p className="mb-4 mt-0.5 text-xs text-slate-400 dark:text-slate-500">
           Soma de QUANTIA dos deals ganhos, por modelo de moto
         </p>
 
@@ -78,12 +85,13 @@ export default function ProdutosTab({ products }) {
                 type="category"
                 dataKey="model"
                 width={180}
-                tick={{ fontSize: 11, fill: "#475569" }}
+                tick={{ fontSize: 11, fill: tickColor }}
                 tickLine={false}
                 axisLine={false}
               />
               <Tooltip
-                cursor={{ fill: "rgba(79,70,229,0.06)" }}
+                cursor={{ fill: isDark ? "rgba(220,0,50,0.10)" : "rgba(220,0,50,0.06)" }}
+                contentStyle={tooltipStyle}
                 formatter={(value) => [formatBRL(value), "Faturamento"]}
               />
               <Bar dataKey="total" radius={[0, 6, 6, 0]} barSize={22}>
@@ -97,13 +105,13 @@ export default function ProdutosTab({ products }) {
                   dataKey="total"
                   position="right"
                   formatter={(v) => formatBRL(v)}
-                  style={{ fontSize: 10, fill: "#334155", fontWeight: 600 }}
+                  style={{ fontSize: 10, fill: labelColor, fontWeight: 600 }}
                 />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div className="flex h-40 items-center justify-center text-sm text-slate-400">
+          <div className="flex h-40 items-center justify-center text-sm text-slate-400 dark:text-slate-500">
             Nenhuma venda com valor para os filtros selecionados.
           </div>
         )}

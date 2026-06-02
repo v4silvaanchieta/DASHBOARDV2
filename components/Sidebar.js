@@ -17,17 +17,22 @@ export const MENU_ITEMS = [
   { id: "configuracoes", label: "Configurações", icon: "⚙️" },
 ];
 
-export default function Sidebar({ activeTab, onSelect }) {
+const LOGO_LIGHT =
+  "https://github.com/v4silvaanchieta/DASHBOARDV2/blob/main/velot-cor-2.png?raw=true";
+const LOGO_DARK =
+  "https://github.com/v4silvaanchieta/DASHBOARDV2/blob/main/velot-cor-1.png?raw=true";
+
+export default function Sidebar({ activeTab, onSelect, theme = "light" }) {
   return (
-    <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-slate-950 text-slate-300">
-      {/* Logo / Marca */}
-      <div className="flex items-center gap-3 h-16 px-6 border-b border-slate-800/80">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-slate-950 font-bold">
-          V
-        </div>
-        <span className="text-lg font-semibold tracking-tight text-white">
-          Velot
-        </span>
+    <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-slate-950 text-slate-300 md:border-r md:border-slate-800/80">
+      {/* Logo / Marca (alterna conforme o tema) */}
+      <div className="flex items-center h-16 px-6 border-b border-slate-800/80">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={theme === "dark" ? LOGO_DARK : LOGO_LIGHT}
+          alt="Velot"
+          className="h-8 w-auto object-contain"
+        />
       </div>
 
       {/* Navegação */}
@@ -44,7 +49,7 @@ export default function Sidebar({ activeTab, onSelect }) {
                   className={[
                     "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors",
                     active
-                      ? "bg-slate-800 text-white"
+                      ? "bg-velot text-white shadow-sm shadow-velot/30"
                       : "text-slate-400 hover:bg-slate-900 hover:text-white",
                   ].join(" ")}
                 >
