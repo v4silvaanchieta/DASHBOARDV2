@@ -1,39 +1,50 @@
 "use client";
 
 /**
- * Tabela de Auditoria de Lojas — Score de Higiene do CRM (Etapa 5).
+ * Tabela de Auditoria de Lojas — Score de Higiene e Adoção do CRM.
  *
- * @param {{ rows: Array<{ loja: string, score: number, stagnant: number, tiBh: number, emptyFields: number, totalLeads: number }> }} props
+ * @param {{ rows: Array<{
+ *   loja: string,
+ *   score: number,
+ *   estagnados: number,
+ *   tiBh: number,
+ *   ganhosZerados: number,
+ *   perdasSemMotivo: number,
+ *   totalLeads: number,
+ * }> }} props
  */
 export default function StoreHygieneTable({ rows }) {
-  /** Classe de cor do badge de score: verde > 80, amarelo > 50, vermelho < 50. */
-  const scoreTone = (score) => {
-    if (score > 80) return "bg-emerald-100 text-emerald-700";
-    if (score > 50) return "bg-amber-100 text-amber-700";
-    return "bg-red-100 text-red-700";
+  /** Estilização condicional do badge de score. */
+  const scoreBadge = (score) => {
+    if (score >= 90) return "text-emerald-700 bg-emerald-50 border-emerald-200";
+    if (score >= 70) return "text-amber-700 bg-amber-50 border-amber-200";
+    return "text-rose-700 bg-rose-50 border-rose-200";
   };
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-        Higiene do CRM e Adoção
+        Higiene e Adoção do CRM
       </h2>
       <p className="mb-4 mt-0.5 text-xs text-slate-400">
-        Score de qualidade do cadastro por loja (0–100)
+        Score de qualidade por loja (0–100) · regras do comitê comercial
       </p>
 
       {rows.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                <th className="py-2 pr-4 font-medium">Loja</th>
-                <th className="py-2 pr-4 font-medium">Score</th>
-                <th className="py-2 pr-4 text-right font-medium">
-                  Leads Estagnados
+              <tr className="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500">
+                <th className="py-2 pr-4 font-semibold">Loja</th>
+                <th className="py-2 pr-4 font-semibold">Score Geral</th>
+                <th className="py-2 pr-4 text-right font-semibold">
+                  Estagnados (&gt;48h)
                 </th>
-                <th className="py-2 pr-4 text-right font-medium">"TI BH"</th>
-                <th className="py-2 text-right font-medium">Campos Vazios</th>
+                <th className="py-2 pr-4 text-right font-semibold">Cards "TI BH"</th>
+                <th className="py-2 pr-4 text-right font-semibold">
+                  Ganhos Zerados
+                </th>
+                <th className="py-2 text-right font-semibold">Perdas s/ Motivo</th>
               </tr>
             </thead>
             <tbody>
@@ -47,7 +58,7 @@ export default function StoreHygieneTable({ rows }) {
                   </td>
                   <td className="py-2.5 pr-4">
                     <span
-                      className={`inline-flex min-w-[3rem] justify-center rounded-full px-2.5 py-1 text-xs font-semibold ${scoreTone(
+                      className={`inline-flex min-w-[3rem] justify-center rounded-full border px-2.5 py-1 text-xs font-semibold ${scoreBadge(
                         r.score
                       )}`}
                     >
@@ -55,13 +66,16 @@ export default function StoreHygieneTable({ rows }) {
                     </span>
                   </td>
                   <td className="py-2.5 pr-4 text-right text-slate-700">
-                    {r.stagnant}
+                    {r.estagnados}
                   </td>
                   <td className="py-2.5 pr-4 text-right text-slate-700">
                     {r.tiBh}
                   </td>
+                  <td className="py-2.5 pr-4 text-right text-slate-700">
+                    {r.ganhosZerados}
+                  </td>
                   <td className="py-2.5 text-right text-slate-700">
-                    {r.emptyFields}
+                    {r.perdasSemMotivo}
                   </td>
                 </tr>
               ))}
