@@ -12,6 +12,7 @@ import StoreHygieneTable from "@/components/StoreHygieneTable";
 import ScoreGauge from "@/components/ScoreGauge";
 import MarketingSection from "@/components/MarketingSection";
 import SourceCrossSection from "@/components/SourceCrossSection";
+import StagnantAlert from "@/components/StagnantAlert";
 import NegociosTab from "@/components/tabs/NegociosTab";
 import ProdutosTab from "@/components/tabs/ProdutosTab";
 import RelatoriosTab from "@/components/tabs/RelatoriosTab";
@@ -36,10 +37,7 @@ import {
   computeCampaignPerformance,
   computeAiEfficiency,
 } from "@/lib/marketing";
-import {
-  computeStoreGeneration,
-  computeMatrizVsUnidade,
-} from "@/lib/crossref";
+import { computeStoreGeneration } from "@/lib/crossref";
 import { computeProductRevenue } from "@/lib/products";
 
 export default function DashboardPage() {
@@ -119,10 +117,6 @@ export default function DashboardPage() {
     () => computeStoreGeneration(leadsSdr, filteredData),
     [leadsSdr, filteredData]
   );
-  const matrizVsUnidade = useMemo(
-    () => computeMatrizVsUnidade(filteredData),
-    [filteredData]
-  );
   const products = useMemo(
     () => computeProductRevenue(filteredData),
     [filteredData]
@@ -137,6 +131,21 @@ export default function DashboardPage() {
   }, [hygieneRows]);
   const scoreScopeName =
     filters.pipeline === PIPELINE_ALL ? "Todas as Unidades" : filters.pipeline;
+
+  // Alerta de leads estagnados na rede (total + pior unidade), via hygieneRows.
+  const stagnantAlert = useMemo(() => {
+    let total = 0;
+    let top = null;
+    for (const r of hygieneRows) {
+      total += r.estagnados;
+      if (r.estagnados > 0 && (!top || r.estagnados > top.estagnados)) top = r;
+    }
+    return {
+      total,
+      topStore: top?.loja ?? null,
+      topCount: top?.estagnados ?? 0,
+    };
+  }, [hygieneRows]);
 
   const activeLabel =
     MENU_ITEMS.find((m) => m.id === activeTab)?.label ?? "Dashboard";
@@ -272,10 +281,14 @@ export default function DashboardPage() {
                     scopeName={scoreScopeName}
                     count={hygieneRows.length}
                   />
-                  <SourceCrossSection
-                    generation={generation}
-                    matrizVsUnidade={matrizVsUnidade}
-                  />
+                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <StagnantAlert
+                      total={stagnantAlert.total}
+                      topStore={stagnantAlert.topStore}
+                      topCount={stagnantAlert.topCount}
+                    />
+                    <SourceCrossSection generation={generation} />
+                  </div>
                   <StoreHygieneTable rows={hygieneRows} />
                 </>
               )}
