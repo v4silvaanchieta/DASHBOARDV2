@@ -10,6 +10,7 @@ import { formatDuration, SLA_TARGET_MINUTES } from "@/lib/metrics";
  */
 export default function SlaCard({ sla }) {
   const { avgMinutes, sampleSize, waitingCount, withinTarget } = sla;
+  const target = sla.targetMinutes ?? SLA_TARGET_MINUTES;
 
   const valueColor = withinTarget ? "text-emerald-600" : "text-red-600";
   const badge = withinTarget
@@ -24,7 +25,7 @@ export default function SlaCard({ sla }) {
             Gestão de SLA · Speed to Lead
           </p>
           <p className="mt-0.5 text-xs text-slate-400">
-            Pré-Qualificação (SDR/IA) → Novos Leads · meta &lt; {SLA_TARGET_MINUTES} min
+            Pré-Qualificação (SDR/IA) → Novos Leads · meta &lt; {target} min
           </p>
         </div>
         <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${badge.cls}`}>
