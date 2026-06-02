@@ -4,6 +4,7 @@ import {
   DATE_RANGE_OPTIONS,
   PIPELINE_ALL,
   SOURCE_ALL,
+  SOURCE_V4,
 } from "@/lib/filters";
 
 /**
@@ -84,6 +85,7 @@ export default function FilterBar({
             onChange={(e) => update({ source: e.target.value })}
           >
             <option value={SOURCE_ALL}>Todas as Origens</option>
+            <option value={SOURCE_V4}>Chamada V4 (WhatsApp / tag V4)</option>
             {sourceOptions.map((opt) => (
               <option key={opt} value={opt}>
                 {opt}
