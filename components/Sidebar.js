@@ -10,7 +10,7 @@
 export const MENU_ITEMS = [
   { id: "visao-geral", label: "Visão Geral", icon: "📊" },
   { id: "negocios", label: "Negócios", icon: "💼" },
-  { id: "pipeline", label: "Pipeline", icon: "🔀" },
+  { id: "pipeline", label: "Unidades", icon: "🔀" },
   { id: "produtos", label: "Produtos", icon: "📦" },
   { id: "campanhas", label: "Campanhas", icon: "📣" },
   { id: "relatorios", label: "Relatórios", icon: "📈" },

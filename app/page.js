@@ -9,6 +9,7 @@ import SlaCard from "@/components/SlaCard";
 import SalesFunnelChart from "@/components/SalesFunnelChart";
 import LossPieChart from "@/components/LossPieChart";
 import StoreHygieneTable from "@/components/StoreHygieneTable";
+import ScoreGauge from "@/components/ScoreGauge";
 import MarketingSection from "@/components/MarketingSection";
 import SourceCrossSection from "@/components/SourceCrossSection";
 import NegociosTab from "@/components/tabs/NegociosTab";
@@ -126,6 +127,16 @@ export default function DashboardPage() {
     () => computeProductRevenue(filteredData),
     [filteredData]
   );
+
+  // Nota geral de score: média dos scores das unidades do recorte atual.
+  // Com filtro de unidade, hygieneRows tem 1 item -> média = score daquela unidade.
+  const overallScore = useMemo(() => {
+    if (!hygieneRows.length) return null;
+    const sum = hygieneRows.reduce((acc, r) => acc + r.score, 0);
+    return Math.round(sum / hygieneRows.length);
+  }, [hygieneRows]);
+  const scoreScopeName =
+    filters.pipeline === PIPELINE_ALL ? "Todas as Unidades" : filters.pipeline;
 
   const activeLabel =
     MENU_ITEMS.find((m) => m.id === activeTab)?.label ?? "Dashboard";
@@ -253,9 +264,14 @@ export default function DashboardPage() {
               {/* === NEGÓCIOS === */}
               {activeTab === "negocios" && <NegociosTab data={filteredData} />}
 
-              {/* === PIPELINE (Auditoria das Franquias) === */}
+              {/* === UNIDADES (Auditoria das Franquias) === */}
               {activeTab === "pipeline" && (
                 <>
+                  <ScoreGauge
+                    score={overallScore}
+                    scopeName={scoreScopeName}
+                    count={hygieneRows.length}
+                  />
                   <SourceCrossSection
                     generation={generation}
                     matrizVsUnidade={matrizVsUnidade}
