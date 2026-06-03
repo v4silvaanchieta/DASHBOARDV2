@@ -73,7 +73,7 @@ export default function ScoreGauge({ score, scopeName, count }) {
         <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
           {count === 1
             ? "Nota da unidade selecionada"
-            : `Média de ${count} ${count === 1 ? "unidade" : "unidades"}`}
+            : `Média de ${count} unidades ativas`}
         </p>
       </div>
     </div>

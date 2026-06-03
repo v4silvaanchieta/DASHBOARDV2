@@ -131,13 +131,17 @@ export default function DashboardPage() {
     [filteredData]
   );
 
-  // Nota geral de score: média dos scores das unidades do recorte atual.
-  // Com filtro de unidade, hygieneRows tem 1 item -> média = score daquela unidade.
+  // Nota geral: média dos scores APENAS das unidades ativas (totalLeads > 0).
+  // Lojas sem leads não entram no denominador (não inflam a média com nota 100).
+  const activeStores = useMemo(
+    () => hygieneRows.filter((r) => r.totalLeads > 0),
+    [hygieneRows]
+  );
   const overallScore = useMemo(() => {
-    if (!hygieneRows.length) return null;
-    const sum = hygieneRows.reduce((acc, r) => acc + r.score, 0);
-    return Math.round(sum / hygieneRows.length);
-  }, [hygieneRows]);
+    if (!activeStores.length) return null;
+    const sum = activeStores.reduce((acc, r) => acc + r.score, 0);
+    return Math.round(sum / activeStores.length);
+  }, [activeStores]);
   const scoreScopeName =
     filters.pipeline === PIPELINE_ALL ? "Todas as Unidades" : filters.pipeline;
 
@@ -288,7 +292,7 @@ export default function DashboardPage() {
                   <ScoreGauge
                     score={overallScore}
                     scopeName={scoreScopeName}
-                    count={hygieneRows.length}
+                    count={activeStores.length}
                   />
                   <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                     <StagnantAlert
