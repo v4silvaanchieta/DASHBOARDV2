@@ -162,19 +162,55 @@ export default function DashboardPage() {
   const scoreScopeName =
     filters.pipeline === PIPELINE_ALL ? "Todas as Unidades" : filters.pipeline;
 
-  // Alerta de leads estagnados na rede (total + pior unidade), via hygieneRows.
-  const stagnantAlert = useMemo(() => {
-    let total = 0;
-    let top = null;
-    for (const r of hygieneRows) {
-      total += r.estagnados;
-      if (r.estagnados > 0 && (!top || r.estagnados > top.estagnados)) top = r;
-    }
-    return {
-      total,
-      topStore: top?.loja ?? null,
-      topCount: top?.estagnados ?? 0,
+  // Carrossel de Alertas Operacionais (4 slides) — derivado de hygieneRows.
+  // "Pior loja" (top offender) ignora lojas sem leads (totalLeads <= 0).
+  const operationalSlides = useMemo(() => {
+    const active = hygieneRows.filter((r) => r.totalLeads > 0);
+    const sumBy = (field) => active.reduce((acc, r) => acc + r[field], 0);
+    const topBy = (field) => {
+      let top = null;
+      for (const r of active) {
+        if (r[field] > 0 && (!top || r[field] > top[field])) top = r;
+      }
+      return top;
     };
+
+    const tStag = topBy("estagnados");
+    const tGanho = topBy("ganhosZerados");
+    const tPerda = topBy("perdasSemMotivo");
+
+    const critical = active.filter((r) => r.score < 70);
+    let worst = null;
+    for (const r of active) {
+      if (!worst || r.score < worst.score) worst = r;
+    }
+
+    return [
+      {
+        kind: "stagnant",
+        value: sumBy("estagnados"),
+        topStore: tStag?.loja ?? null,
+        topCount: tStag?.estagnados ?? 0,
+      },
+      {
+        kind: "ganhoZerado",
+        value: sumBy("ganhosZerados"),
+        topStore: tGanho?.loja ?? null,
+        topCount: tGanho?.ganhosZerados ?? 0,
+      },
+      {
+        kind: "perdaSemMotivo",
+        value: sumBy("perdasSemMotivo"),
+        topStore: tPerda?.loja ?? null,
+        topCount: tPerda?.perdasSemMotivo ?? 0,
+      },
+      {
+        kind: "scoreCritico",
+        value: critical.length,
+        topStore: critical.length > 0 ? worst?.loja ?? null : null,
+        topCount: worst?.score ?? 0,
+      },
+    ];
   }, [hygieneRows]);
 
   const activeLabel =
@@ -312,11 +348,7 @@ export default function DashboardPage() {
                     leadsTotal={activeLeads}
                   />
                   <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    <StagnantAlert
-                      total={stagnantAlert.total}
-                      topStore={stagnantAlert.topStore}
-                      topCount={stagnantAlert.topCount}
-                    />
+                    <StagnantAlert slides={operationalSlides} />
                     <SourceCrossSection generation={generation} />
                   </div>
                   <StoreHygieneTable rows={hygieneRows} />

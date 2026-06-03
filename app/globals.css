@@ -14,3 +14,18 @@ body {
 .dark body {
   @apply bg-slate-950 text-slate-100;
 }
+
+@keyframes alertFade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alert-fade {
+  animation: alertFade 0.45s ease both;
+}
