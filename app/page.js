@@ -185,6 +185,14 @@ export default function DashboardPage() {
       if (!worst || r.score < worst.score) worst = r;
     }
 
+    // Slide 5: leads ativos (open) represados no pipeline "Matriz".
+    const matrizRetidos = filteredData.filter((r) => {
+      const pipe = String(r.pipeline ?? "").toLowerCase();
+      const status = String(r.status ?? "").trim().toLowerCase();
+      const isOpen = status === "aberto" || status === "open" || status === "aberta";
+      return pipe.includes("matriz") && isOpen;
+    }).length;
+
     return [
       {
         kind: "stagnant",
@@ -210,8 +218,14 @@ export default function DashboardPage() {
         topStore: critical.length > 0 ? worst?.loja ?? null : null,
         topCount: worst?.score ?? 0,
       },
+      {
+        kind: "matrizRetidos",
+        value: matrizRetidos,
+        topStore: null,
+        topCount: 0,
+      },
     ];
-  }, [hygieneRows]);
+  }, [hygieneRows, filteredData]);
 
   // Só entram na rotação os alertas com pendência (count > 0).
   // Se todos zerarem, o componente exibe o card de "Operação em Dia".

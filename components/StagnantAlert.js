@@ -26,6 +26,10 @@ const META = {
     label: "Unidades com Score Crítico",
     subtitle: "Score geral abaixo de 70 pontos",
   },
+  matrizRetidos: {
+    label: "Leads Retidos na Matriz",
+    subtitle: "PIPELINE Matriz com status aberto",
+  },
 };
 
 /** Texto de apoio (com a loja destacada em Velot) por tipo de slide. */
@@ -44,11 +48,20 @@ function SupportText({ slide }) {
       ganhoZerado: "Nenhuma venda Ganho sem valor. Catálogo em ordem. 👏",
       perdaSemMotivo: "Nenhuma perda sem motivo registrada. Justificativas em dia. 👏",
       scoreCritico: "Nenhuma unidade abaixo da meta de qualidade. Rede saudável. 👏",
+      matrizRetidos: "Nenhum lead represado na Matriz. Distribuição em dia. 👏",
     };
     return <>{ok[kind]}</>;
   }
 
   switch (kind) {
+    case "matrizRetidos":
+      return (
+        <>
+          Atenção: {bold} leads estão retidos no pipeline da Matriz. Nenhum lead deve
+          ficar parado na central; realize o redirecionamento manual imediatamente para as
+          franquias mais próximas.
+        </>
+      );
     case "ganhoZerado":
       return (
         <>
