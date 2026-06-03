@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -27,8 +27,6 @@ const META = {
     subtitle: "Score geral abaixo de 70 pontos",
   },
 };
-
-const ROTATE_MS = 6000;
 
 /** Texto de apoio (com a loja destacada em Velot) por tipo de slide. */
 function SupportText({ slide }) {
@@ -116,12 +114,6 @@ function SupportText({ slide }) {
 export default function StagnantAlert({ slides = [] }) {
   const [index, setIndex] = useState(0);
   const count = slides.length;
-
-  useEffect(() => {
-    if (count <= 1) return undefined;
-    const id = setInterval(() => setIndex((i) => (i + 1) % count), ROTATE_MS);
-    return () => clearInterval(id);
-  }, [count]);
 
   // Rede 100% eficiente: nenhum alerta com pendência -> card de sucesso.
   if (count === 0) {
