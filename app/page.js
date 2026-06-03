@@ -21,6 +21,7 @@ import { useDashboardData } from "@/hooks/useDashboardData";
 import {
   applyFilters,
   getUniqueValues,
+  passesDateFilter,
   DATE_RANGE_DEFAULT,
   PIPELINE_ALL,
   SOURCE_ALL,
@@ -82,6 +83,8 @@ export default function DashboardPage() {
     dateRange: DATE_RANGE_DEFAULT,
     pipeline: PIPELINE_ALL,
     source: SOURCE_ALL,
+    customStart: "",
+    customEnd: "",
   });
 
   const pipelineOptions = useMemo(() => getUniqueValues(data, "pipeline"), [data]);
@@ -89,6 +92,12 @@ export default function DashboardPage() {
 
   // Dados filtrados (novo array, derivado de `data`).
   const filteredData = useMemo(() => applyFilters(data, filters), [data, filters]);
+
+  // Leads SDR também respeitam o filtro de data (coluna DATA da aba LEADS SDR).
+  const filteredLeadsSdr = useMemo(
+    () => leadsSdr.filter((l) => passesDateFilter(l.data, filters)),
+    [leadsSdr, filters]
+  );
 
   // Agregações (derivadas do filteredData) — calculadas uma vez por filtro.
   const metrics = useMemo(() => computeMetrics(filteredData), [filteredData]);
@@ -114,8 +123,8 @@ export default function DashboardPage() {
     [filteredData]
   );
   const generation = useMemo(
-    () => computeStoreGeneration(leadsSdr, filteredData),
-    [leadsSdr, filteredData]
+    () => computeStoreGeneration(filteredLeadsSdr, filteredData),
+    [filteredLeadsSdr, filteredData]
   );
   const products = useMemo(
     () => computeProductRevenue(filteredData),
@@ -205,10 +214,10 @@ export default function DashboardPage() {
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <KpiCard
                       label="Entrada SDR IA"
-                      value={leadsSdr.length.toLocaleString("pt-BR")}
+                      value={filteredLeadsSdr.length.toLocaleString("pt-BR")}
                       icon="🤖"
                       accent="indigo"
-                      hint="Total de linhas da aba LEADS SDR"
+                      hint="Leads da aba LEADS SDR (período filtrado)"
                     />
                     <KpiCard
                       label="Leads (Deals)"

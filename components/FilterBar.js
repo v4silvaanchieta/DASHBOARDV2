@@ -94,6 +94,38 @@ export default function FilterBar({
           </select>
         </label>
       </div>
+
+      {/* Período personalizado (datas De/Até) */}
+      {filters.dateRange === "custom" && (
+        <div className="mt-4 grid grid-cols-1 gap-4 border-t border-slate-200 pt-4 dark:border-slate-800 sm:grid-cols-2 lg:grid-cols-3">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              De (data inicial)
+            </span>
+            <input
+              type="date"
+              className={selectClass}
+              value={filters.customStart || ""}
+              disabled={disabled}
+              max={filters.customEnd || undefined}
+              onChange={(e) => update({ customStart: e.target.value })}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Até (data final)
+            </span>
+            <input
+              type="date"
+              className={selectClass}
+              value={filters.customEnd || ""}
+              disabled={disabled}
+              min={filters.customStart || undefined}
+              onChange={(e) => update({ customEnd: e.target.value })}
+            />
+          </label>
+        </div>
+      )}
     </div>
   );
 }
