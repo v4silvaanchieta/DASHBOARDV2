@@ -213,6 +213,13 @@ export default function DashboardPage() {
     ];
   }, [hygieneRows]);
 
+  // Só entram na rotação os alertas com pendência (count > 0).
+  // Se todos zerarem, o componente exibe o card de "Operação em Dia".
+  const activeSlides = useMemo(
+    () => operationalSlides.filter((s) => s.value > 0),
+    [operationalSlides]
+  );
+
   const activeLabel =
     MENU_ITEMS.find((m) => m.id === activeTab)?.label ?? "Dashboard";
 
@@ -348,7 +355,7 @@ export default function DashboardPage() {
                     leadsTotal={activeLeads}
                   />
                   <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    <StagnantAlert slides={operationalSlides} />
+                    <StagnantAlert slides={activeSlides} />
                     <SourceCrossSection generation={generation} />
                   </div>
                   <StoreHygieneTable rows={hygieneRows} />

@@ -123,7 +123,30 @@ export default function StagnantAlert({ slides = [] }) {
     return () => clearInterval(id);
   }, [count]);
 
-  if (count === 0) return null;
+  // Rede 100% eficiente: nenhum alerta com pendência -> card de sucesso.
+  if (count === 0) {
+    return (
+      <div
+        className="rounded-xl border border-l-4 border-emerald-200 bg-emerald-50 p-6 shadow-sm transition-colors dark:border-emerald-800 dark:bg-emerald-950/20"
+        style={{ borderLeftColor: "#10b981" }}
+      >
+        <div className="flex items-start gap-4">
+          <span className="text-emerald-500 dark:text-emerald-400" aria-hidden="true">
+            <CheckCircle2 size={26} />
+          </span>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+              Operação em Dia
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
+              Todas as unidades franqueadas estão cumprindo rigorosamente as diretrizes de
+              higiene e prazos do CRM Velot.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const safe = ((index % count) + count) % count;
   const slide = slides[safe];
