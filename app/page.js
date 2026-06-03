@@ -38,7 +38,10 @@ import {
   computeCampaignPerformance,
   computeAiEfficiency,
 } from "@/lib/marketing";
-import { computeStoreGeneration } from "@/lib/crossref";
+import {
+  computeStoreGeneration,
+  buildUnifiedContacts,
+} from "@/lib/crossref";
 import { computeProductRevenue } from "@/lib/products";
 
 export default function DashboardPage() {
@@ -129,6 +132,12 @@ export default function DashboardPage() {
   const products = useMemo(
     () => computeProductRevenue(filteredData),
     [filteredData]
+  );
+
+  // Lista unificada da aba Negócios: DEALS + leads exclusivos do SDR (sem duplicar).
+  const negociosList = useMemo(
+    () => buildUnifiedContacts(filteredData, filteredLeadsSdr),
+    [filteredData, filteredLeadsSdr]
   );
 
   // Nota geral: média dos scores APENAS das unidades ativas (totalLeads > 0).
@@ -284,7 +293,7 @@ export default function DashboardPage() {
               )}
 
               {/* === NEGÓCIOS === */}
-              {activeTab === "negocios" && <NegociosTab data={filteredData} />}
+              {activeTab === "negocios" && <NegociosTab data={negociosList} />}
 
               {/* === UNIDADES (Auditoria das Franquias) === */}
               {activeTab === "pipeline" && (

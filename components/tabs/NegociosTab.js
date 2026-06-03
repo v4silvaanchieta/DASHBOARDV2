@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatBRL } from "@/lib/metrics";
 
 const PAGE_SIZE = 15;
 
@@ -12,44 +13,65 @@ function waLink(row) {
 }
 
 /**
- * Aba "Negócios" — tabela estilo Excel (scroll horizontal + paginação).
- * Colunas: Data Criação | Lead/Deal | Telefone (wa.me) | Estágio | Proprietário.
+ * Aba "Negócios" — lista unificada (CRM + leads exclusivos do SDR IA).
+ * Colunas: Data | Lead/Deal | Telefone (wa.me) | Estágio | Proprietário | Valor.
  *
  * @param {{ data: Array<Record<string, any>> }} props
  */
 export default function NegociosTab({ data }) {
   const [page, setPage] = useState(0);
+  const [query, setQuery] = useState("");
 
-  const totalPages = Math.max(1, Math.ceil(data.length / PAGE_SIZE));
+  // Busca por nome (Lead/Deal ou contato).
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return data;
+    return data.filter((r) =>
+      `${r.nomeDeal || ""} ${r.nomeContato || ""}`.toLowerCase().includes(q)
+    );
+  }, [data, query]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
-
   const pageRows = useMemo(
-    () => data.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE),
-    [data, safePage]
+    () => filtered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE),
+    [filtered, safePage]
   );
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Negócios (Deals)
+            Negócios · Contatos Unificados
           </h2>
           <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-            {data.length.toLocaleString("pt-BR")} deals · filtros globais aplicados
+            {filtered.length.toLocaleString("pt-BR")} contatos (CRM + SDR IA) · período
+            filtrado
           </p>
         </div>
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setPage(0);
+          }}
+          placeholder="Buscar por nome..."
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-velot focus:outline-none focus:ring-1 focus:ring-velot dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 sm:w-64"
+        />
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-left text-sm">
+        <table className="w-full min-w-[820px] text-left text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:text-slate-400">
-              <th className="py-2 pr-4 font-semibold">Data Criação</th>
+              <th className="py-2 pr-4 font-semibold">Data</th>
               <th className="py-2 pr-4 font-semibold">Lead / Deal</th>
               <th className="py-2 pr-4 font-semibold">Telefone</th>
               <th className="py-2 pr-4 font-semibold">Estágio Atual</th>
-              <th className="py-2 font-semibold">Proprietário</th>
+              <th className="py-2 pr-4 font-semibold">Proprietário</th>
+              <th className="py-2 text-right font-semibold">Valor</th>
             </tr>
           </thead>
           <tbody>
@@ -58,7 +80,7 @@ export default function NegociosTab({ data }) {
               const phone = String(row.telefone || row.cfTelefone || "").trim();
               return (
                 <tr
-                  key={`${row.dealId || "row"}-${i}`}
+                  key={`${row.dealId || row.telefone || "row"}-${i}`}
                   className="border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
                 >
                   <td className="py-2.5 pr-4 whitespace-nowrap text-slate-600 dark:text-slate-400">
@@ -81,11 +103,22 @@ export default function NegociosTab({ data }) {
                       <span className="text-slate-400 dark:text-slate-600">—</span>
                     )}
                   </td>
-                  <td className="py-2.5 pr-4 text-slate-600 dark:text-slate-400">
-                    {row.estagio || "—"}
+                  <td className="py-2.5 pr-4">
+                    {row.sdrOnly ? (
+                      <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        {row.estagio}
+                      </span>
+                    ) : (
+                      <span className="text-slate-600 dark:text-slate-400">
+                        {row.estagio || "—"}
+                      </span>
+                    )}
                   </td>
-                  <td className="py-2.5 text-slate-600 dark:text-slate-400">
+                  <td className="py-2.5 pr-4 text-slate-600 dark:text-slate-400">
                     {row.proprietario || "—"}
+                  </td>
+                  <td className="py-2.5 text-right tabular-nums text-slate-700 dark:text-slate-300">
+                    {formatBRL(Number(row.quantia) || 0)}
                   </td>
                 </tr>
               );
@@ -93,10 +126,10 @@ export default function NegociosTab({ data }) {
             {pageRows.length === 0 && (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="py-10 text-center text-slate-400 dark:text-slate-500"
                 >
-                  Nenhum deal para os filtros selecionados.
+                  Nenhum contato para os filtros/busca atuais.
                 </td>
               </tr>
             )}
