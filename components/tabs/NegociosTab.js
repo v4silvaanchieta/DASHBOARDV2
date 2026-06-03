@@ -12,6 +12,55 @@ function waLink(row) {
   return digits ? `https://wa.me/${digits}` : null;
 }
 
+/** Opções do filtro de Estágio (funil ponta a ponta). */
+const STAGE_FILTERS = [
+  { value: "todos", label: "Todos os Estágios" },
+  { value: "sdr_only", label: "Apenas no SDR IA" },
+  { value: "pre_qualificacao", label: "PRÉ-QUALIFICAÇÃO (SDR / IA)" },
+  { value: "novos_leads", label: "NOVOS LEADS / EM ATENDIMENTO" },
+  { value: "triagem", label: "TRIAGEM" },
+  { value: "analise", label: "ANÁLISE / CRÉDITO" },
+  { value: "faturamento", label: "FATURAMENTO" },
+  { value: "ganho", label: "GANHO" },
+  { value: "perdido", label: "PERDIDO" },
+];
+
+/** Normaliza removendo acentos + lowercase. */
+function normTxt(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
+}
+
+/** true se a linha corresponde ao estágio selecionado. */
+function matchesStage(row, value) {
+  if (value === "todos") return true;
+  const est = normTxt(row.estagio);
+  const status = normTxt(row.status);
+  switch (value) {
+    case "sdr_only":
+      return row.sdrOnly === true;
+    case "pre_qualificacao":
+      return !row.sdrOnly && (est.includes("pre-qualificacao") || est.includes("prospeccao"));
+    case "novos_leads":
+      return est.includes("novos leads") || est.includes("em atendimento");
+    case "triagem":
+      return est.includes("triagem");
+    case "analise":
+      return est.includes("analise") || est.includes("credito");
+    case "faturamento":
+      return est.includes("faturamento") || est.includes("integracao fiscal");
+    case "ganho":
+      return status === "ganho";
+    case "perdido":
+      return status === "perdido";
+    default:
+      return true;
+  }
+}
+
 /**
  * Aba "Negócios" — lista unificada (CRM + leads exclusivos do SDR IA).
  * Colunas: Data | Lead/Deal | Telefone (wa.me) | Estágio | Proprietário | Valor.
@@ -21,15 +70,22 @@ function waLink(row) {
 export default function NegociosTab({ data }) {
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
+  const [stageFilter, setStageFilter] = useState("todos");
 
-  // Busca por nome (Lead/Deal ou contato).
+  // Filtro combinado: estágio + busca por nome (Lead/Deal ou contato).
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return data;
-    return data.filter((r) =>
-      `${r.nomeDeal || ""} ${r.nomeContato || ""}`.toLowerCase().includes(q)
-    );
-  }, [data, query]);
+    return data.filter((r) => {
+      if (!matchesStage(r, stageFilter)) return false;
+      if (
+        q &&
+        !`${r.nomeDeal || ""} ${r.nomeContato || ""}`.toLowerCase().includes(q)
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [data, query, stageFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
@@ -50,16 +106,32 @@ export default function NegociosTab({ data }) {
             filtrado
           </p>
         </div>
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setPage(0);
-          }}
-          placeholder="Buscar por nome..."
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-velot focus:outline-none focus:ring-1 focus:ring-velot dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 sm:w-64"
-        />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <select
+            value={stageFilter}
+            onChange={(e) => {
+              setStageFilter(e.target.value);
+              setPage(0);
+            }}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-velot focus:outline-none focus:ring-1 focus:ring-velot dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 sm:w-60"
+          >
+            {STAGE_FILTERS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(0);
+            }}
+            placeholder="Buscar por nome..."
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-velot focus:outline-none focus:ring-1 focus:ring-velot dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 sm:w-64"
+          />
+        </div>
       </div>
 
       <div className="overflow-x-auto">
