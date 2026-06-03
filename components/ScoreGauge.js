@@ -5,10 +5,14 @@
  * - Sem filtro de unidade: média geral dos scores das unidades.
  * - Com filtro de unidade: o score daquela unidade.
  *
- * @param {{ score: number|null, scopeName: string, count: number }} props
+ * @param {{ score: number|null, scopeName: string, leadsTotal: number }} props
  */
-export default function ScoreGauge({ score, scopeName, count }) {
+export default function ScoreGauge({ score, scopeName, leadsTotal = 0 }) {
   const value = typeof score === "number" ? Math.max(0, Math.min(100, score)) : null;
+  const valueLabel =
+    value === null
+      ? "—"
+      : value.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
 
   // Cor por faixa (mesmos limiares da tabela de higiene).
   const color =
@@ -55,7 +59,7 @@ export default function ScoreGauge({ score, scopeName, count }) {
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-3xl font-bold text-slate-900 dark:text-slate-50">
-            {value === null ? "—" : value}
+            {valueLabel}
           </span>
           <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">
             / 100
@@ -71,9 +75,7 @@ export default function ScoreGauge({ score, scopeName, count }) {
           {scopeName}
         </p>
         <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-          {count === 1
-            ? "Nota da unidade selecionada"
-            : `Média de ${count} unidades ativas`}
+          Média ponderada sobre {leadsTotal.toLocaleString("pt-BR")} leads no período
         </p>
       </div>
     </div>

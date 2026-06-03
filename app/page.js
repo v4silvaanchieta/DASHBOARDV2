@@ -140,17 +140,25 @@ export default function DashboardPage() {
     [filteredData, filteredLeadsSdr]
   );
 
-  // Nota geral: média dos scores APENAS das unidades ativas (totalLeads > 0).
-  // Lojas sem leads não entram no denominador (não inflam a média com nota 100).
+  // Nota geral: MÉDIA PONDERADA pelo volume de leads das unidades ativas.
+  // Score Geral = Σ(score_loja * leads_loja) / Σ(leads_loja das lojas ativas).
   const activeStores = useMemo(
     () => hygieneRows.filter((r) => r.totalLeads > 0),
     [hygieneRows]
   );
+  const activeLeads = useMemo(
+    () => activeStores.reduce((acc, r) => acc + r.totalLeads, 0),
+    [activeStores]
+  );
   const overallScore = useMemo(() => {
-    if (!activeStores.length) return null;
-    const sum = activeStores.reduce((acc, r) => acc + r.score, 0);
-    return Math.round(sum / activeStores.length);
-  }, [activeStores]);
+    if (!activeLeads) return null;
+    const weighted = activeStores.reduce(
+      (acc, r) => acc + r.score * r.totalLeads,
+      0
+    );
+    // Arredonda para 1 casa decimal (ex.: 44.5).
+    return Math.round((weighted / activeLeads) * 10) / 10;
+  }, [activeStores, activeLeads]);
   const scoreScopeName =
     filters.pipeline === PIPELINE_ALL ? "Todas as Unidades" : filters.pipeline;
 
@@ -301,7 +309,7 @@ export default function DashboardPage() {
                   <ScoreGauge
                     score={overallScore}
                     scopeName={scoreScopeName}
-                    count={activeStores.length}
+                    leadsTotal={activeLeads}
                   />
                   <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                     <StagnantAlert
