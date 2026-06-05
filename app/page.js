@@ -346,7 +346,7 @@ export default function DashboardPage() {
                       value={metrics.leadsParados.toLocaleString("pt-BR")}
                       icon="⏳"
                       accent="amber"
-                      hint="Etapa inicial há mais de 24h"
+                      hint="Pré-Qualificação/Prospecção há mais de 48h"
                     />
                     <KpiCard
                       label="Taxa de Conversão"
