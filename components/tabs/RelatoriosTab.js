@@ -1,8 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import KpiCard from "@/components/KpiCard";
+
+/** Opções de ordenação da matriz (label + subtexto dinâmico). */
+const SORT_OPTIONS = [
+  { value: "pior-score", label: "Ordenar por: Pior Score", sub: "ordenado pelo pior Score" },
+  { value: "maior-score", label: "Ordenar por: Maior Score", sub: "ordenado pelo maior Score" },
+  { value: "preQualif", label: "Ordenar por: Vol. Pré-Qualificação", sub: "por volume de Pré-Qualificação" },
+  { value: "novosLeads", label: "Ordenar por: Vol. Novos Leads", sub: "por volume de Novos Leads" },
+  { value: "triagem", label: "Ordenar por: Vol. Triagem", sub: "por volume de Triagem" },
+  { value: "analise", label: "Ordenar por: Vol. Análise", sub: "por volume de Análise" },
+  { value: "faturamento", label: "Ordenar por: Vol. Faturamento", sub: "por volume de Faturamento" },
+  { value: "estagnadosPreQ", label: "Ordenar por: Vol. Estagnados (>48h)", sub: "por volume de Estagnados (>48h)" },
+  { value: "tiBh", label: "Ordenar por: Vol. Cards TI BH", sub: "por volume de Cards TI BH" },
+  { value: "ganhosZerados", label: "Ordenar por: Vol. Ganhos Zerados", sub: "por volume de Ganhos Zerados" },
+];
 
 /** Colunas exportadas (rótulo -> chave) — usadas no copiar e no download. */
 const EXPORT_COLUMNS = [
@@ -50,13 +64,26 @@ function scoreBadge(score) {
  */
 export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
   const [copied, setCopied] = useState(false);
+  const [matrixSort, setMatrixSort] = useState("pior-score");
 
   const conversion =
     sdrCount > 0 ? ((dealsCount / sdrCount) * 100).toFixed(1).replace(".", ",") : "0";
 
+  // Ordena uma CÓPIA das linhas conforme o critério escolhido (não muta a prop).
+  const sortedRows = useMemo(() => {
+    const copy = [...rows];
+    if (matrixSort === "pior-score") copy.sort((a, b) => a.score - b.score);
+    else if (matrixSort === "maior-score") copy.sort((a, b) => b.score - a.score);
+    else copy.sort((a, b) => (b[matrixSort] || 0) - (a[matrixSort] || 0));
+    return copy;
+  }, [rows, matrixSort]);
+
+  const sortSub =
+    SORT_OPTIONS.find((o) => o.value === matrixSort)?.sub ?? "ordenado pelo pior Score";
+
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(buildCsv(rows));
+      await navigator.clipboard.writeText(buildCsv(sortedRows));
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
@@ -66,8 +93,8 @@ export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
 
   // Gera o download automático do CSV (UTF-8 com BOM p/ Excel ler acentos).
   const handleDownload = () => {
-    if (rows.length === 0) return;
-    const content = String.fromCharCode(0xfeff) + buildCsv(rows);
+    if (sortedRows.length === 0) return;
+    const content = String.fromCharCode(0xfeff) + buildCsv(sortedRows);
     const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const today = new Date().toISOString().slice(0, 10);
@@ -123,10 +150,21 @@ export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
               Matriz Analítica por Unidade
             </h2>
             <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-              Funil de cards abertos + higiene · ordenado pelo pior Score
+              Funil de cards abertos + higiene · {sortSub}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <select
+              value={matrixSort}
+              onChange={(e) => setMatrixSort(e.target.value)}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm focus:border-velot focus:outline-none focus:ring-1 focus:ring-velot dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 sm:w-64"
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
             <button
               type="button"
               onClick={handleCopy}
@@ -166,7 +204,7 @@ export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
+                {sortedRows.map((r) => (
                   <tr
                     key={r.loja}
                     className="border-b border-slate-100 last:border-0 dark:border-slate-800"
