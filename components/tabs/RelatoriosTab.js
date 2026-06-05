@@ -1,21 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download } from "lucide-react";
+import { ChevronDown, ChevronsUpDown, ChevronUp, Download } from "lucide-react";
 import KpiCard from "@/components/KpiCard";
 
-/** Opções de ordenação da matriz (label + subtexto dinâmico). */
-const SORT_OPTIONS = [
-  { value: "pior-score", label: "Ordenar por: Pior Score", sub: "ordenado pelo pior Score" },
-  { value: "maior-score", label: "Ordenar por: Maior Score", sub: "ordenado pelo maior Score" },
-  { value: "preQualif", label: "Ordenar por: Vol. Pré-Qualificação", sub: "por volume de Pré-Qualificação" },
-  { value: "novosLeads", label: "Ordenar por: Vol. Novos Leads", sub: "por volume de Novos Leads" },
-  { value: "triagem", label: "Ordenar por: Vol. Triagem", sub: "por volume de Triagem" },
-  { value: "analise", label: "Ordenar por: Vol. Análise", sub: "por volume de Análise" },
-  { value: "faturamento", label: "Ordenar por: Vol. Faturamento", sub: "por volume de Faturamento" },
-  { value: "estagnadosPreQ", label: "Ordenar por: Vol. Estagnados (>48h)", sub: "por volume de Estagnados (>48h)" },
-  { value: "tiBh", label: "Ordenar por: Vol. Cards TI BH", sub: "por volume de Cards TI BH" },
-  { value: "ganhosZerados", label: "Ordenar por: Vol. Ganhos Zerados", sub: "por volume de Ganhos Zerados" },
+/** Colunas da matriz: chave, rótulo, tipo (p/ ordenação) e alinhamento. */
+const COLUMNS = [
+  { key: "loja", label: "Loja / Franquia", type: "string", align: "left" },
+  { key: "preQualif", label: "Pré-Qualif.", type: "number", align: "center" },
+  { key: "novosLeads", label: "Novos / Atend.", type: "number", align: "center" },
+  { key: "triagem", label: "Triagem", type: "number", align: "center" },
+  { key: "analise", label: "Análise", type: "number", align: "center" },
+  { key: "faturamento", label: "Faturam.", type: "number", align: "center" },
+  { key: "score", label: "Score", type: "number", align: "center" },
+  { key: "estagnadosPreQ", label: "Estag. >48h", type: "number", align: "center" },
+  { key: "tiBh", label: "TI BH", type: "number", align: "center" },
+  { key: "ganhosZerados", label: "Ganhos Zerados", type: "number", align: "center" },
+  { key: "perdasSemMotivo", label: "Perdas s/ Motivo", type: "number", align: "center" },
 ];
 
 /** Colunas exportadas (rótulo -> chave) — usadas no copiar e no download. */
@@ -57,6 +58,21 @@ function scoreBadge(score) {
   return "text-rose-700 bg-rose-50 border-rose-200 dark:text-rose-400 dark:bg-rose-500/10 dark:border-rose-500/30";
 }
 
+/** Ícone de ordenação: ativo (Velot, direção) ou neutro (opaco). */
+function SortIcon({ active, direction }) {
+  if (!active) {
+    return (
+      <ChevronsUpDown
+        size={13}
+        className="text-slate-300 dark:text-slate-600"
+        aria-hidden="true"
+      />
+    );
+  }
+  const Icon = direction === "asc" ? ChevronUp : ChevronDown;
+  return <Icon size={13} className="text-velot" aria-hidden="true" />;
+}
+
 /**
  * Aba "Relatórios" — Relatório Gerencial Consolidado.
  *
@@ -64,22 +80,52 @@ function scoreBadge(score) {
  */
 export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
   const [copied, setCopied] = useState(false);
-  const [matrixSort, setMatrixSort] = useState("pior-score");
+  // Ordenação nativa via clique no cabeçalho (padrão: pior Score primeiro).
+  const [sortField, setSortField] = useState("score");
+  const [sortDirection, setSortDirection] = useState("asc");
 
   const conversion =
     sdrCount > 0 ? ((dealsCount / sdrCount) * 100).toFixed(1).replace(".", ",") : "0";
 
-  // Ordena uma CÓPIA das linhas conforme o critério escolhido (não muta a prop).
+  // Ordena uma CÓPIA das linhas (string -> localeCompare, número -> diff).
   const sortedRows = useMemo(() => {
+    const col = COLUMNS.find((c) => c.key === sortField);
+    const dir = sortDirection === "asc" ? 1 : -1;
     const copy = [...rows];
-    if (matrixSort === "pior-score") copy.sort((a, b) => a.score - b.score);
-    else if (matrixSort === "maior-score") copy.sort((a, b) => b.score - a.score);
-    else copy.sort((a, b) => (b[matrixSort] || 0) - (a[matrixSort] || 0));
+    copy.sort((a, b) => {
+      if (col?.type === "string") {
+        return (
+          dir *
+          String(a[sortField] ?? "").localeCompare(
+            String(b[sortField] ?? ""),
+            "pt-BR",
+            { sensitivity: "base" }
+          )
+        );
+      }
+      return dir * ((a[sortField] ?? 0) - (b[sortField] ?? 0));
+    });
     return copy;
-  }, [rows, matrixSort]);
+  }, [rows, sortField, sortDirection]);
 
-  const sortSub =
-    SORT_OPTIONS.find((o) => o.value === matrixSort)?.sub ?? "ordenado pelo pior Score";
+  const activeCol = COLUMNS.find((c) => c.key === sortField);
+  const dirText =
+    activeCol?.type === "string"
+      ? sortDirection === "asc"
+        ? "A → Z"
+        : "Z → A"
+      : sortDirection === "asc"
+      ? "Menor para Maior"
+      : "Maior para Menor";
+
+  const handleSort = (field) => {
+    if (field === sortField) {
+      setSortDirection((d) => (d === "desc" ? "asc" : "desc"));
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+  };
 
   const handleCopy = async () => {
     try {
@@ -150,21 +196,11 @@ export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
               Matriz Analítica por Unidade
             </h2>
             <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-              Funil de cards abertos + higiene · {sortSub}
+              Funil de cards abertos + higiene · ordenado por {activeCol?.label} (
+              {dirText})
             </p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <select
-              value={matrixSort}
-              onChange={(e) => setMatrixSort(e.target.value)}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm focus:border-velot focus:outline-none focus:ring-1 focus:ring-velot dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 sm:w-64"
-            >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleCopy}
@@ -190,17 +226,27 @@ export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
             <table className="w-full min-w-[1000px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                  <th className="py-2 pr-3 font-semibold">Loja / Franquia</th>
-                  <th className="py-2 px-3 text-center font-semibold">Pré-Qualif.</th>
-                  <th className="py-2 px-3 text-center font-semibold">Novos / Atend.</th>
-                  <th className="py-2 px-3 text-center font-semibold">Triagem</th>
-                  <th className="py-2 px-3 text-center font-semibold">Análise</th>
-                  <th className="py-2 px-3 text-center font-semibold">Faturam.</th>
-                  <th className="py-2 px-3 text-center font-semibold">Score</th>
-                  <th className="py-2 px-3 text-center font-semibold">Estag. &gt;48h</th>
-                  <th className="py-2 px-3 text-center font-semibold">TI BH</th>
-                  <th className="py-2 px-3 text-center font-semibold">Ganhos Zerados</th>
-                  <th className="py-2 px-3 text-center font-semibold">Perdas s/ Motivo</th>
+                  {COLUMNS.map((col) => (
+                    <th
+                      key={col.key}
+                      onClick={() => handleSort(col.key)}
+                      className={`py-2 font-semibold cursor-pointer select-none transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 ${
+                        col.align === "left" ? "pr-3 text-left" : "px-3 text-center"
+                      }`}
+                    >
+                      <span
+                        className={`inline-flex items-center gap-1 ${
+                          col.align === "center" ? "justify-center" : ""
+                        }`}
+                      >
+                        {col.label}
+                        <SortIcon
+                          active={sortField === col.key}
+                          direction={sortDirection}
+                        />
+                      </span>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
