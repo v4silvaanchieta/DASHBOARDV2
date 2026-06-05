@@ -33,7 +33,11 @@ import {
   SLA_TARGET_MINUTES,
 } from "@/lib/metrics";
 import { computeFunnel, computeLossAnalysis } from "@/lib/charts";
-import { computeStoreHygiene, SCORE_PENALTY } from "@/lib/audit";
+import {
+  computeStoreHygiene,
+  computeStoreReport,
+  SCORE_PENALTY,
+} from "@/lib/audit";
 import {
   computeCampaignPerformance,
   computeAiEfficiency,
@@ -138,6 +142,12 @@ export default function DashboardPage() {
   const negociosList = useMemo(
     () => buildUnifiedContacts(filteredData, filteredLeadsSdr),
     [filteredData, filteredLeadsSdr]
+  );
+
+  // Matriz analítica da aba Relatórios (funil + higiene por unidade).
+  const storeReport = useMemo(
+    () => computeStoreReport(filteredData, settings.penalties),
+    [filteredData, settings.penalties]
   );
 
   // Nota geral: MÉDIA PONDERADA pelo volume de leads das unidades ativas.
@@ -392,7 +402,13 @@ export default function DashboardPage() {
               )}
 
               {/* === RELATÓRIOS === */}
-              {activeTab === "relatorios" && <RelatoriosTab data={filteredData} />}
+              {activeTab === "relatorios" && (
+                <RelatoriosTab
+                  sdrCount={filteredLeadsSdr.length}
+                  dealsCount={filteredData.length}
+                  rows={storeReport}
+                />
+              )}
 
               {/* === CONFIGURAÇÕES === */}
               {activeTab === "configuracoes" && (
