@@ -139,10 +139,13 @@ export default function DashboardPage() {
   );
 
   // Lista unificada da aba Negócios: DEALS + leads exclusivos do SDR (sem duplicar).
-  const negociosList = useMemo(
-    () => buildUnifiedContacts(filteredData, filteredLeadsSdr),
-    [filteredData, filteredLeadsSdr]
-  );
+  // Ao isolar uma loja específica, NÃO inclui leads "Apenas no SDR IA" (que não têm
+  // pipeline) — eles só aparecem quando o filtro está em "Todas as Lojas".
+  const negociosList = useMemo(() => {
+    const sdrSource =
+      filters.pipeline === PIPELINE_ALL ? filteredLeadsSdr : [];
+    return buildUnifiedContacts(filteredData, sdrSource);
+  }, [filteredData, filteredLeadsSdr, filters.pipeline]);
 
   // Matriz analítica da aba Relatórios (funil + higiene por unidade).
   const storeReport = useMemo(
