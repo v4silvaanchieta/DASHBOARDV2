@@ -28,6 +28,14 @@ export default function FilterBar({
 }) {
   const update = (patch) => onChange({ ...filters, ...patch });
 
+  // Organização das lojas: Matriz isolada + franquias (pipelines com "velot").
+  const matrizOption = pipelineOptions.find((p) =>
+    p.toLowerCase().includes("matriz")
+  );
+  const franquiaOptions = pipelineOptions.filter((p) =>
+    p.toLowerCase().includes("velot")
+  );
+
   const selectClass =
     "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-velot focus:outline-none focus:ring-1 focus:ring-velot disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:disabled:bg-slate-800/50";
 
@@ -65,7 +73,8 @@ export default function FilterBar({
             onChange={(e) => update({ pipeline: e.target.value })}
           >
             <option value={PIPELINE_ALL}>Todas as Lojas</option>
-            {pipelineOptions.map((opt) => (
+            {matrizOption && <option value={matrizOption}>Matriz</option>}
+            {franquiaOptions.map((opt) => (
               <option key={opt} value={opt}>
                 {opt}
               </option>
