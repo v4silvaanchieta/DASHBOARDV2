@@ -1,27 +1,37 @@
 "use client";
 
 import { useState } from "react";
+import { Download } from "lucide-react";
 import KpiCard from "@/components/KpiCard";
 
-/** Colunas exportadas (rótulo -> chave) para o "Copiar matriz". */
+/** Colunas exportadas (rótulo -> chave) — usadas no copiar e no download. */
 const EXPORT_COLUMNS = [
-  ["Loja / Franquia", "loja"],
-  ["Pré-Qualificação (SDR/IA)", "preQualif"],
-  ["Novos Leads / Em Atendimento", "novosLeads"],
+  ["Unidade", "loja"],
+  ["Pré-Qualificação", "preQualif"],
+  ["Novos Leads", "novosLeads"],
   ["Triagem", "triagem"],
-  ["Análise / Crédito", "analise"],
+  ["Análise", "analise"],
   ["Faturamento", "faturamento"],
   ["Score Geral", "score"],
-  ["Estagnados >48h", "estagnadosPreQ"],
-  ['Cards "TI BH"', "tiBh"],
+  ["Estagnados", "estagnadosPreQ"],
+  ["Cards TI BH", "tiBh"],
   ["Ganhos Zerados", "ganhosZerados"],
-  ["Perdas sem Motivo", "perdasSemMotivo"],
+  ["Perdas Sem Motivo", "perdasSemMotivo"],
 ];
 
 function csvCell(value) {
   const s = String(value ?? "");
   if (/[";\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
+}
+
+/** Monta o conteúdo CSV (separador ;) com as colunas da matriz. */
+function buildCsv(rows) {
+  const header = EXPORT_COLUMNS.map(([label]) => csvCell(label)).join(";");
+  const lines = rows.map((r) =>
+    EXPORT_COLUMNS.map(([, key]) => csvCell(r[key])).join(";")
+  );
+  return [header, ...lines].join("\r\n");
 }
 
 /** Cor do badge de score (mesmos limiares da aba Unidades). */
@@ -45,17 +55,29 @@ export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
     sdrCount > 0 ? ((dealsCount / sdrCount) * 100).toFixed(1).replace(".", ",") : "0";
 
   const handleCopy = async () => {
-    const header = EXPORT_COLUMNS.map(([label]) => csvCell(label)).join(";");
-    const lines = rows.map((r) =>
-      EXPORT_COLUMNS.map(([, key]) => csvCell(r[key])).join(";")
-    );
     try {
-      await navigator.clipboard.writeText([header, ...lines].join("\n"));
+      await navigator.clipboard.writeText(buildCsv(rows));
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
       setCopied(false);
     }
+  };
+
+  // Gera o download automático do CSV (UTF-8 com BOM p/ Excel ler acentos).
+  const handleDownload = () => {
+    if (rows.length === 0) return;
+    const content = String.fromCharCode(0xfeff) + buildCsv(rows);
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const today = new Date().toISOString().slice(0, 10);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `relatorio-analitico-velot-${today}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const numCell = "py-2.5 px-3 text-center tabular-nums text-slate-700 dark:text-slate-300";
@@ -104,14 +126,25 @@ export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
               Funil de cards abertos + higiene · ordenado pelo pior Score
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleCopy}
-            disabled={rows.length === 0}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-velot px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-velot-dark disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {copied ? "✅ Copiado!" : "📋 Copiar matriz (CSV)"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopy}
+              disabled={rows.length === 0}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              {copied ? "✅ Copiado!" : "📋 Copiar matriz"}
+            </button>
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={rows.length === 0}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#DC0032] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#b8002a] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Download size={15} />
+              Exportar Relatório Analítico
+            </button>
+          </div>
         </div>
 
         {rows.length > 0 ? (
