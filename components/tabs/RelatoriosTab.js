@@ -13,6 +13,8 @@ const COLUMNS = [
   { key: "triagem", label: "Triagem", type: "number", align: "center" },
   { key: "analise", label: "Análise", type: "number", align: "center" },
   { key: "faturamento", label: "Faturam.", type: "number", align: "center" },
+  { key: "ganhos", label: "Ganhos", type: "number", align: "center" },
+  { key: "perdidos", label: "Perdidos", type: "number", align: "center" },
   { key: "score", label: "Score", type: "number", align: "center" },
   { key: "estagnadosPreQ", label: "Estag. >48h", type: "number", align: "center" },
   { key: "tiBh", label: "TI BH", type: "number", align: "center" },
@@ -29,6 +31,8 @@ const EXPORT_COLUMNS = [
   ["Triagem", "triagem"],
   ["Análise", "analise"],
   ["Faturamento", "faturamento"],
+  ["Ganhos", "ganhos"],
+  ["Perdidos", "perdidos"],
   ["Score Geral", "score"],
   ["Estagnados", "estagnadosPreQ"],
   ["Cards TI BH", "tiBh"],
@@ -198,8 +202,8 @@ export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
               Matriz Analítica por Unidade
             </h2>
             <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-              Cards por estágio + higiene · ordenado por {activeCol?.label} (
-              {dirText})
+              Funil aberto + ganhos/perdidos + higiene · ordenado por{" "}
+              {activeCol?.label} ({dirText})
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -225,7 +229,7 @@ export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
 
         {rows.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1080px] text-left text-sm">
+            <table className="w-full min-w-[1240px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:text-slate-400">
                   {COLUMNS.map((col) => (
@@ -268,6 +272,12 @@ export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
                     <td className={numCell}>{r.triagem}</td>
                     <td className={numCell}>{r.analise}</td>
                     <td className={numCell}>{r.faturamento}</td>
+                    <td className="py-2.5 px-3 text-center tabular-nums font-semibold text-emerald-600 dark:text-emerald-400">
+                      {r.ganhos}
+                    </td>
+                    <td className="py-2.5 px-3 text-center tabular-nums font-semibold text-rose-600 dark:text-rose-400">
+                      {r.perdidos}
+                    </td>
                     <td className="py-2.5 px-3 text-center">
                       <span
                         className={`inline-flex min-w-[2.75rem] justify-center rounded-full border px-2 py-0.5 text-xs font-semibold ${scoreBadge(
