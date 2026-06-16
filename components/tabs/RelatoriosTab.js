@@ -7,6 +7,7 @@ import KpiCard from "@/components/KpiCard";
 /** Colunas da matriz: chave, rótulo, tipo (p/ ordenação) e alinhamento. */
 const COLUMNS = [
   { key: "loja", label: "Loja / Franquia", type: "string", align: "left" },
+  { key: "totalLeads", label: "Total Leads", type: "number", align: "center" },
   { key: "preQualif", label: "Pré-Qualif.", type: "number", align: "center" },
   { key: "novosLeads", label: "Novos / Atend.", type: "number", align: "center" },
   { key: "triagem", label: "Triagem", type: "number", align: "center" },
@@ -22,6 +23,7 @@ const COLUMNS = [
 /** Colunas exportadas (rótulo -> chave) — usadas no copiar e no download. */
 const EXPORT_COLUMNS = [
   ["Unidade", "loja"],
+  ["Total Leads", "totalLeads"],
   ["Pré-Qualificação", "preQualif"],
   ["Novos Leads", "novosLeads"],
   ["Triagem", "triagem"],
@@ -223,7 +225,7 @@ export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
 
         {rows.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1000px] text-left text-sm">
+            <table className="w-full min-w-[1080px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:text-slate-400">
                   {COLUMNS.map((col) => (
@@ -257,6 +259,9 @@ export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
                   >
                     <td className="py-2.5 pr-3 font-medium text-slate-800 dark:text-slate-100 whitespace-nowrap">
                       {r.loja}
+                    </td>
+                    <td className={`${numCell} font-semibold text-slate-900 dark:text-slate-50`}>
+                      {r.totalLeads}
                     </td>
                     <td className={numCell}>{r.preQualif}</td>
                     <td className={numCell}>{r.novosLeads}</td>
