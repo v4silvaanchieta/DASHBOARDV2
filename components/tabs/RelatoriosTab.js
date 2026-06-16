@@ -198,7 +198,7 @@ export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
               Matriz Analítica por Unidade
             </h2>
             <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-              Funil de cards abertos + higiene · ordenado por {activeCol?.label} (
+              Cards por estágio + higiene · ordenado por {activeCol?.label} (
               {dirText})
             </p>
           </div>
