@@ -31,7 +31,7 @@ export default function SalesFunnelChart({ data, isDark = false }) {
         Funil de Vendas Consolidado
       </h2>
       <p className="mb-4 mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-        Contagem de deals por estágio
+        Evolução acumulada: leads que alcançaram cada etapa (ou além)
       </p>
 
       {hasData ? (
