@@ -25,6 +25,7 @@ export default function FilterBar({
   pipelineOptions,
   sourceOptions,
   disabled = false,
+  hidePipeline = false,
 }) {
   const update = (patch) => onChange({ ...filters, ...patch });
 
@@ -61,26 +62,28 @@ export default function FilterBar({
           </select>
         </label>
 
-        {/* Filtro de Loja/Franquia (PIPELINE) */}
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            Loja / Franquia
-          </span>
-          <select
-            className={selectClass}
-            value={filters.pipeline}
-            disabled={disabled}
-            onChange={(e) => update({ pipeline: e.target.value })}
-          >
-            <option value={PIPELINE_ALL}>Todas as Lojas</option>
-            {matrizOption && <option value={matrizOption}>Matriz</option>}
-            {franquiaOptions.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-        </label>
+        {/* Filtro de Loja/Franquia (PIPELINE) — oculto para perfil "unit" */}
+        {!hidePipeline && (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Loja / Franquia
+            </span>
+            <select
+              className={selectClass}
+              value={filters.pipeline}
+              disabled={disabled}
+              onChange={(e) => update({ pipeline: e.target.value })}
+            >
+              <option value={PIPELINE_ALL}>Todas as Lojas</option>
+              {matrizOption && <option value={matrizOption}>Matriz</option>}
+              {franquiaOptions.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         {/* Filtro de Origem (CF_UTM_SOURCE) */}
         <label className="flex flex-col gap-1.5">

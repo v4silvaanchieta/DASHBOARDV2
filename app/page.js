@@ -46,8 +46,10 @@ import {
 import {
   computeStoreGeneration,
   buildUnifiedContacts,
+  phoneKey,
 } from "@/lib/crossref";
 import { computeProductRevenue } from "@/lib/products";
+import { useAuth } from "@/context/AuthContext";
 
 /**
  * Calcula o badge de variação (Δ%) entre o valor atual e o de comparação.
@@ -75,6 +77,11 @@ function makeDelta(current, compare, goodWhenDown = false) {
 
 export default function DashboardPage() {
   const { data, leadsSdr, loading, error, lastUpdated } = useDashboardData();
+
+  // RBAC / Data Siloing: perfil do usuário (admin vê tudo; unit vê só sua pipeline).
+  const { userData } = useAuth();
+  const isUnit = userData?.role === "unit" && Boolean(userData?.pipeline);
+  const unitPipeline = userData?.pipeline ?? "";
 
   // Navegação por abas (React Tabs) — mantém dados em memória + polling ativo.
   const [activeTab, setActiveTab] = useState("visao-geral");
@@ -124,17 +131,45 @@ export default function DashboardPage() {
     compareCustomEnd: "",
   });
 
-  const pipelineOptions = useMemo(() => getUniqueValues(data, "pipeline"), [data]);
-  const sourceOptions = useMemo(() => getUniqueValues(data, "utmSource"), [data]);
+  // ISOLAMENTO NA RAIZ: para perfil "unit", retém APENAS registros da pipeline da
+  // unidade logada antes de qualquer agregação (preserva toda a lógica downstream).
+  const scopedData = useMemo(() => {
+    if (!isUnit) return data;
+    return data.filter((r) => String(r.pipeline ?? "").trim() === unitPipeline);
+  }, [data, isUnit, unitPipeline]);
 
-  // Dados filtrados (novo array, derivado de `data`).
-  const filteredData = useMemo(() => applyFilters(data, filters), [data, filters]);
-
-  // Leads SDR também respeitam o filtro de data (coluna DATA da aba LEADS SDR).
-  const filteredLeadsSdr = useMemo(
-    () => leadsSdr.filter((l) => passesDateFilter(l.data, filters)),
-    [leadsSdr, filters]
+  const pipelineOptions = useMemo(
+    () => getUniqueValues(data, "pipeline"),
+    [data]
   );
+  const sourceOptions = useMemo(
+    () => getUniqueValues(scopedData, "utmSource"),
+    [scopedData]
+  );
+
+  // Dados filtrados (novo array). Unit força o match exato da própria pipeline.
+  const filteredData = useMemo(() => {
+    const eff = isUnit ? { ...filters, pipeline: unitPipeline } : filters;
+    return applyFilters(scopedData, eff);
+  }, [scopedData, filters, isUnit, unitPipeline]);
+
+  // Leads SDR respeitam o filtro de data; para unit, restringe aos leads cujo
+  // telefone cruza com um deal da própria pipeline (não vê SDR da rede inteira).
+  const filteredLeadsSdr = useMemo(() => {
+    const byDate = leadsSdr.filter((l) => passesDateFilter(l.data, filters));
+    if (!isUnit) return byDate;
+    const phones = new Set();
+    for (const d of filteredData) {
+      for (const p of [d.telefone, d.cfTelefone]) {
+        const k = phoneKey(p);
+        if (k) phones.add(k);
+      }
+    }
+    return byDate.filter((l) => {
+      const k = phoneKey(l.telefone);
+      return k && phones.has(k);
+    });
+  }, [leadsSdr, filters, isUnit, filteredData]);
 
   // Agregações (derivadas do filteredData) — calculadas uma vez por filtro.
   const metrics = useMemo(() => computeMetrics(filteredData), [filteredData]);
@@ -144,15 +179,18 @@ export default function DashboardPage() {
   );
 
   // Período de comparação (mesma Loja/Origem, data diferente) — só quando ativo.
+  // Também respeita o escopo da unidade (scopedData + pipeline forçada).
   const compareData = useMemo(() => {
     if (!filters.compareEnabled) return null;
-    return applyFilters(data, {
+    const eff = {
       ...filters,
       dateRange: filters.compareDateRange,
       customStart: filters.compareCustomStart,
       customEnd: filters.compareCustomEnd,
-    });
-  }, [data, filters]);
+    };
+    if (isUnit) eff.pipeline = unitPipeline;
+    return applyFilters(scopedData, eff);
+  }, [scopedData, filters, isUnit, unitPipeline]);
   const compareMetrics = useMemo(
     () => (compareData ? computeMetrics(compareData) : null),
     [compareData]
@@ -164,8 +202,20 @@ export default function DashboardPage() {
       customStart: filters.compareCustomStart,
       customEnd: filters.compareCustomEnd,
     };
-    return leadsSdr.filter((l) => passesDateFilter(l.data, cf)).length;
-  }, [leadsSdr, filters]);
+    const byDate = leadsSdr.filter((l) => passesDateFilter(l.data, cf));
+    if (!isUnit || !compareData) return byDate.length;
+    const phones = new Set();
+    for (const d of compareData) {
+      for (const p of [d.telefone, d.cfTelefone]) {
+        const k = phoneKey(p);
+        if (k) phones.add(k);
+      }
+    }
+    return byDate.filter((l) => {
+      const k = phoneKey(l.telefone);
+      return k && phones.has(k);
+    }).length;
+  }, [leadsSdr, filters, isUnit, compareData]);
   const funnelData = useMemo(() => computeFunnel(filteredData), [filteredData]);
   const lossAnalysis = useMemo(
     () => computeLossAnalysis(filteredData),
@@ -226,8 +276,11 @@ export default function DashboardPage() {
     // Arredonda para 1 casa decimal (ex.: 44.5).
     return Math.round((weighted / activeLeads) * 10) / 10;
   }, [activeStores, activeLeads]);
-  const scoreScopeName =
-    filters.pipeline === PIPELINE_ALL ? "Todas as Unidades" : filters.pipeline;
+  const scoreScopeName = isUnit
+    ? unitPipeline
+    : filters.pipeline === PIPELINE_ALL
+    ? "Todas as Unidades"
+    : filters.pipeline;
 
   // Carrossel de Alertas Operacionais (4 slides) — derivado de hygieneRows.
   // "Pior loja" (top offender) ignora lojas sem leads (totalLeads <= 0).
@@ -324,13 +377,20 @@ export default function DashboardPage() {
             pipelineOptions={pipelineOptions}
             sourceOptions={sourceOptions}
             disabled={loading}
+            hidePipeline={isUnit}
           />
           {!loading && !error && (
             <p className="-mt-3 text-xs text-slate-500 dark:text-slate-400">
               <span className="font-semibold text-slate-700 dark:text-slate-200">
                 {filteredData.length.toLocaleString("pt-BR")}
               </span>{" "}
-              deals após filtros · {data.length.toLocaleString("pt-BR")} no total
+              deals após filtros · {scopedData.length.toLocaleString("pt-BR")} no
+              total
+              {isUnit && (
+                <span className="ml-1 text-slate-400 dark:text-slate-500">
+                  · unidade {unitPipeline}
+                </span>
+              )}
             </p>
           )}
 

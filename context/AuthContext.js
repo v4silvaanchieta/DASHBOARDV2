@@ -6,10 +6,12 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
-import { auth } from "@/lib/firebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebaseConfig";
 
 const AuthContext = createContext({
   user: null,
+  userData: null,
   loading: true,
   login: async () => {},
   logout: async () => {},
@@ -22,11 +24,23 @@ const AuthContext = createContext({
  */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  // Perfil do usuário no Firestore: { role: "admin" | "unit", pipeline: string }.
+  const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+      if (firebaseUser) {
+        try {
+          const snap = await getDoc(doc(db, "users", firebaseUser.uid));
+          setUserData(snap.exists() ? snap.data() : null);
+        } catch {
+          setUserData(null);
+        }
+      } else {
+        setUserData(null);
+      }
       setLoading(false);
     });
     return () => unsubscribe();
@@ -37,7 +51,7 @@ export function AuthProvider({ children }) {
   const logout = () => signOut(auth);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, userData, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
