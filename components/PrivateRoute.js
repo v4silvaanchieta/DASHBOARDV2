@@ -22,15 +22,20 @@ function GlobalSpinner() {
  * @param {{ children: React.ReactNode }} props
  */
 export default function PrivateRoute({ children }) {
-  const { user, loading } = useAuth();
+  const { user, userData, loading } = useAuth();
   const router = useRouter();
 
+  // Sessão otimista: considera o cache (userData) enquanto o Firebase valida em
+  // background. Se a validação falhar (!user), o AuthContext limpa o userData e
+  // este efeito redireciona para /login.
+  const authed = Boolean(user) || Boolean(userData);
+
   useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [loading, user, router]);
+    if (!loading && !authed) router.replace("/login");
+  }, [loading, authed, router]);
 
   if (loading) return <GlobalSpinner />;
-  if (!user) return <GlobalSpinner />; // aguardando o redirecionamento
+  if (!authed) return <GlobalSpinner />; // aguardando o redirecionamento
 
   return children;
 }
