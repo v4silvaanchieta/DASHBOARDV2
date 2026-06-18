@@ -1,0 +1,38 @@
+rules_version = '2';
+
+// Regras de segurança do Firestore — RBAC do painel Velot.
+// Coleção `users`: documento por usuário, id = UID do Firebase Auth,
+// contendo { email, role: "admin" | "unit", pipeline }.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Usuário autenticado?
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // O usuário logado é admin? (lê o próprio doc; get() ignora as rules, sem recursão)
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /users/{userId} {
+      // LEITURA:
+      //  - qualquer usuário autenticado pode ler O SEU PRÓPRIO documento
+      //    (OBRIGATÓRIO para o AuthContext carregar role/pipeline no login);
+      //  - admin pode ler qualquer documento (auditoria / listagem).
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+
+      // ESCRITA (create / update / delete):
+      //  - exclusiva de administradores (cadastro e segmentação de contas).
+      allow write: if isAdmin();
+    }
+
+    // Demais coleções: negadas por padrão (segurança por omissão).
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
