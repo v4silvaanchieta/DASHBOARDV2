@@ -49,6 +49,30 @@ import {
 } from "@/lib/crossref";
 import { computeProductRevenue } from "@/lib/products";
 
+/**
+ * Calcula o badge de variação (Δ%) entre o valor atual e o de comparação.
+ * `goodWhenDown` inverte a cor para métricas em que cair é bom (perdas, parados).
+ * Retorna null quando não há período de comparação.
+ */
+function makeDelta(current, compare, goodWhenDown = false) {
+  if (compare == null) return null;
+  if (compare === 0) {
+    if (!current) return { label: "0%", tone: "neutral" };
+    return { label: "novo", tone: goodWhenDown ? "bad" : "good" };
+  }
+  const pct = ((current - compare) / compare) * 100;
+  const up = pct > 0.05;
+  const down = pct < -0.05;
+  const arrow = up ? "▲" : down ? "▼" : "•";
+  let tone = "neutral";
+  if (up) tone = goodWhenDown ? "bad" : "good";
+  else if (down) tone = goodWhenDown ? "good" : "bad";
+  return {
+    label: `${arrow} ${Math.abs(pct).toFixed(1).replace(".", ",")}%`,
+    tone,
+  };
+}
+
 export default function DashboardPage() {
   const { data, leadsSdr, loading, error, lastUpdated } = useDashboardData();
 
@@ -93,6 +117,11 @@ export default function DashboardPage() {
     source: SOURCE_ALL,
     customStart: "",
     customEnd: "",
+    // Comparação de períodos (usa a mesma Loja/Origem, outro período).
+    compareEnabled: false,
+    compareDateRange: "all",
+    compareCustomStart: "",
+    compareCustomEnd: "",
   });
 
   const pipelineOptions = useMemo(() => getUniqueValues(data, "pipeline"), [data]);
@@ -113,6 +142,30 @@ export default function DashboardPage() {
     () => computeSLA(filteredData, settings.slaTargetMinutes),
     [filteredData, settings.slaTargetMinutes]
   );
+
+  // Período de comparação (mesma Loja/Origem, data diferente) — só quando ativo.
+  const compareData = useMemo(() => {
+    if (!filters.compareEnabled) return null;
+    return applyFilters(data, {
+      ...filters,
+      dateRange: filters.compareDateRange,
+      customStart: filters.compareCustomStart,
+      customEnd: filters.compareCustomEnd,
+    });
+  }, [data, filters]);
+  const compareMetrics = useMemo(
+    () => (compareData ? computeMetrics(compareData) : null),
+    [compareData]
+  );
+  const compareSdrCount = useMemo(() => {
+    if (!filters.compareEnabled) return null;
+    const cf = {
+      dateRange: filters.compareDateRange,
+      customStart: filters.compareCustomStart,
+      customEnd: filters.compareCustomEnd,
+    };
+    return leadsSdr.filter((l) => passesDateFilter(l.data, cf)).length;
+  }, [leadsSdr, filters]);
   const funnelData = useMemo(() => computeFunnel(filteredData), [filteredData]);
   const lossAnalysis = useMemo(
     () => computeLossAnalysis(filteredData),
@@ -317,12 +370,14 @@ export default function DashboardPage() {
                       icon="🤖"
                       accent="indigo"
                       hint="Leads da aba LEADS SDR (período filtrado)"
+                      delta={makeDelta(filteredLeadsSdr.length, compareSdrCount)}
                     />
                     <KpiCard
                       label="Leads (Deals)"
                       value={metrics.leadsGerados.toLocaleString("pt-BR")}
                       icon="👥"
                       hint="Total de deals filtrados"
+                      delta={makeDelta(metrics.leadsGerados, compareMetrics?.leadsGerados)}
                     />
                     <KpiCard
                       label="Faturamento Realizado"
@@ -330,6 +385,7 @@ export default function DashboardPage() {
                       icon="💰"
                       accent="emerald"
                       hint="Soma de QUANTIA · STATUS ganho"
+                      delta={makeDelta(metrics.faturamento, compareMetrics?.faturamento)}
                     />
                     <KpiCard
                       label="Faturamento Perdido"
@@ -337,6 +393,11 @@ export default function DashboardPage() {
                       icon="💸"
                       accent="red"
                       hint="Soma de QUANTIA · STATUS perdido"
+                      delta={makeDelta(
+                        metrics.faturamentoPerdido,
+                        compareMetrics?.faturamentoPerdido,
+                        true
+                      )}
                     />
                     <KpiCard
                       label="Vendas Realizadas"
@@ -344,6 +405,10 @@ export default function DashboardPage() {
                       icon="✅"
                       accent="emerald"
                       hint="STATUS ganho"
+                      delta={makeDelta(
+                        metrics.vendasRealizadas,
+                        compareMetrics?.vendasRealizadas
+                      )}
                     />
                     <KpiCard
                       label="Vendas Perdidas"
@@ -351,6 +416,11 @@ export default function DashboardPage() {
                       icon="❌"
                       accent="red"
                       hint="STATUS perdido"
+                      delta={makeDelta(
+                        metrics.vendasPerdidas,
+                        compareMetrics?.vendasPerdidas,
+                        true
+                      )}
                     />
                     <KpiCard
                       label="Leads Parados"
@@ -358,6 +428,11 @@ export default function DashboardPage() {
                       icon="⏳"
                       accent="amber"
                       hint="Pré-Qualificação/Prospecção há mais de 48h"
+                      delta={makeDelta(
+                        metrics.leadsParados,
+                        compareMetrics?.leadsParados,
+                        true
+                      )}
                     />
                     <KpiCard
                       label="Taxa de Conversão"
@@ -366,6 +441,10 @@ export default function DashboardPage() {
                         .replace(".", ",")}%`}
                       icon="📈"
                       hint="Vendas / Deals filtrados"
+                      delta={makeDelta(
+                        metrics.taxaConversao,
+                        compareMetrics?.taxaConversao
+                      )}
                     />
                   </div>
 

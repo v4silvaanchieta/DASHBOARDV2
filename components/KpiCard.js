@@ -11,6 +11,7 @@
  *   icon?: string,
  *   hint?: string,
  *   accent?: "slate" | "emerald" | "red" | "indigo" | "amber",
+ *   delta?: { label: string, tone: "good" | "bad" | "neutral" } | null,
  * }} props
  */
 export default function KpiCard({
@@ -19,6 +20,7 @@ export default function KpiCard({
   icon,
   hint,
   accent = "slate",
+  delta = null,
 }) {
   const accents = {
     slate: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
@@ -28,6 +30,12 @@ export default function KpiCard({
     indigo:
       "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400",
     amber: "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400",
+  };
+
+  const deltaTones = {
+    good: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
+    bad: "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400",
+    neutral: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
   };
 
   const iconClass = accents[accent] ?? accents.slate;
@@ -47,9 +55,21 @@ export default function KpiCard({
           </span>
         )}
       </div>
-      <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
-        {value}
-      </p>
+      <div className="mt-3 flex items-center gap-2">
+        <p className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
+          {value}
+        </p>
+        {delta && (
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+              deltaTones[delta.tone] ?? deltaTones.neutral
+            }`}
+            title="Variação vs período de comparação"
+          >
+            {delta.label}
+          </span>
+        )}
+      </div>
       {hint && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>}
     </div>
   );
