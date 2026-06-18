@@ -1,6 +1,8 @@
 "use client";
 
-import { Moon, Sun } from "lucide-react";
+import { LogOut, Moon, Sun } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 /**
  * Header superior do dashboard. Título, indicador real-time e toggle de tema.
@@ -19,6 +21,17 @@ export default function Header({
   onToggleTheme,
 }) {
   const isDark = theme === "dark";
+  const { logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      router.replace("/login");
+    }
+  };
+
   const updatedLabel = lastUpdated
     ? lastUpdated.toLocaleTimeString("pt-BR", {
         hour: "2-digit",
@@ -67,6 +80,18 @@ export default function Header({
           className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-colors hover:border-velot hover:text-velot dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-velot dark:hover:text-velot"
         >
           {isDark ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+
+        {/* Sair / Logout */}
+        <button
+          type="button"
+          onClick={handleLogout}
+          aria-label="Sair"
+          title="Sair"
+          className="flex h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 transition-colors hover:border-velot hover:text-velot dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-velot dark:hover:text-velot"
+        >
+          <LogOut size={16} />
+          <span className="hidden sm:inline">Sair</span>
         </button>
       </div>
     </header>

@@ -1,5 +1,7 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
+import AppGate from "@/components/AppGate";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -28,7 +30,11 @@ export default function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       {/* A Sidebar é renderizada pela página (navegação por estado / tabs). */}
-      <body className="font-sans">{children}</body>
+      <body className="font-sans">
+        <AuthProvider>
+          <AppGate>{children}</AppGate>
+        </AuthProvider>
+      </body>
     </html>
   );
 }
