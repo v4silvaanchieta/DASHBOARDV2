@@ -15,6 +15,7 @@ export const MENU_ITEMS = [
   { id: "campanhas", label: "Campanhas", icon: "📣" },
   { id: "relatorios", label: "Relatórios", icon: "📈" },
   { id: "configuracoes", label: "Configurações", icon: "⚙️" },
+  { id: "gerenciar-acessos", label: "Gerenciar Acessos", icon: "🔐", adminOnly: true },
 ];
 
 // A sidebar é sempre escura (nos dois temas), então usamos sempre o logo
@@ -22,7 +23,8 @@ export const MENU_ITEMS = [
 const LOGO_ON_DARK =
   "https://github.com/v4silvaanchieta/DASHBOARDV2/blob/main/velot-cor-1.png?raw=true";
 
-export default function Sidebar({ activeTab, onSelect, theme = "light" }) {
+export default function Sidebar({ activeTab, onSelect, theme = "light", isAdmin = false }) {
+  const items = MENU_ITEMS.filter((item) => !item.adminOnly || isAdmin);
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-slate-950 text-slate-300 md:border-r md:border-slate-800/80">
       {/* Logo / Marca (sidebar sempre escura -> logo claro nos dois temas) */}
@@ -38,7 +40,7 @@ export default function Sidebar({ activeTab, onSelect, theme = "light" }) {
       {/* Navegação */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-1">
-          {MENU_ITEMS.map((item) => {
+          {items.map((item) => {
             const active = item.id === activeTab;
             return (
               <li key={item.id}>

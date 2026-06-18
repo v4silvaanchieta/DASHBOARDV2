@@ -18,6 +18,7 @@ import NegociosTab from "@/components/tabs/NegociosTab";
 import ProdutosTab from "@/components/tabs/ProdutosTab";
 import RelatoriosTab from "@/components/tabs/RelatoriosTab";
 import ConfiguracoesTab from "@/components/tabs/ConfiguracoesTab";
+import GerenciarAcessos from "@/components/tabs/GerenciarAcessos";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import {
   applyFilters,
@@ -81,6 +82,7 @@ export default function DashboardPage() {
   // RBAC / Data Siloing: perfil do usuário (admin vê tudo; unit vê só sua pipeline).
   const { userData } = useAuth();
   const isUnit = userData?.role === "unit" && Boolean(userData?.pipeline);
+  const isAdmin = userData?.role === "admin";
   const unitPipeline = userData?.pipeline ?? "";
 
   // Navegação por abas (React Tabs) — mantém dados em memória + polling ativo.
@@ -359,7 +361,12 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Sidebar activeTab={activeTab} onSelect={setActiveTab} theme={theme} />
+      <Sidebar
+        activeTab={activeTab}
+        onSelect={setActiveTab}
+        theme={theme}
+        isAdmin={isAdmin}
+      />
 
       <div className="min-h-screen md:pl-64">
         <Header
@@ -370,6 +377,16 @@ export default function DashboardPage() {
         />
 
         <main className="space-y-6 p-6">
+          {activeTab === "gerenciar-acessos" ? (
+            isAdmin ? (
+              <GerenciarAcessos />
+            ) : (
+              <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                Acesso restrito a administradores.
+              </div>
+            )
+          ) : (
+            <>
           {/* Filtros globais — sempre no topo, afetam todas as abas */}
           <FilterBar
             filters={filters}
@@ -564,6 +581,8 @@ export default function DashboardPage() {
               {activeTab === "configuracoes" && (
                 <ConfiguracoesTab settings={settings} onChange={setSettings} />
               )}
+            </>
+          )}
             </>
           )}
         </main>
