@@ -21,8 +21,17 @@ export default function Header({
   onToggleTheme,
 }) {
   const isDark = theme === "dark";
-  const { logout } = useAuth();
+  const { logout, userData } = useAuth();
   const router = useRouter();
+
+  // Indicador de perfil (também serve de diagnóstico do RBAC).
+  const roleLabel =
+    userData?.role === "admin"
+      ? "Administrador"
+      : userData?.role === "unit"
+      ? `Unidade · ${userData.pipeline}`
+      : "Perfil não configurado";
+  const roleConfigured = Boolean(userData?.role);
 
   const handleLogout = async () => {
     try {
@@ -63,8 +72,14 @@ export default function Header({
         </div>
 
         <div className="hidden sm:block text-right">
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
-            Equipe Velot
+          <p
+            className={`text-sm font-medium ${
+              roleConfigured
+                ? "text-slate-700 dark:text-slate-200"
+                : "text-amber-600 dark:text-amber-400"
+            }`}
+          >
+            {roleLabel}
           </p>
           <p className="text-xs text-slate-400 dark:text-slate-500">
             Auto-refresh a cada 60s

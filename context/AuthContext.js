@@ -59,10 +59,20 @@ export function AuthProvider({ children }) {
         try {
           const snap = await getDoc(doc(db, "users", firebaseUser.uid));
           const data = snap.exists() ? snap.data() : null;
+          if (!data) {
+            console.warn(
+              `[Velot] Sem documento de permissão no Firestore para users/${firebaseUser.uid}. ` +
+                `Crie o doc (id = este UID) com { role: "admin", pipeline: "all" } para virar administrador.`
+            );
+          }
           setUserData(data);
           writeCache(data);
-        } catch {
-          // Falha de rede transitória: mantém o cache otimista atual.
+        } catch (e) {
+          // Pode ser regra do Firestore bloqueando a leitura do próprio doc.
+          console.warn(
+            "[Velot] Falha ao ler users/" + firebaseUser.uid + ": " + (e?.message || e)
+          );
+          // Mantém o cache otimista atual em caso de falha transitória.
         }
       } else {
         // Token expirado/inválido -> limpa estado e cache (PrivateRoute redireciona).
