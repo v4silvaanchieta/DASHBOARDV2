@@ -1,14 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Trash2 } from "lucide-react";
-import { auth } from "@/lib/firebaseConfig";
+import { useEffect, useState } from "react";
+import { deleteApp, initializeApp } from "firebase/app";
+import {
+  createUserWithEmailAndPassword,
+  getAuth,
+  signOut,
+} from "firebase/auth";
+import { collection, doc, onSnapshot, setDoc } from "firebase/firestore";
+import { db, firebaseConfig } from "@/lib/firebaseConfig";
 
 const EMPTY_FORM = { email: "", password: "", role: "unit", pipeline: "" };
 
 /**
  * Aba "Gerenciar Acessos" (somente admin).
- * Cria/exclui contas via API Route protegida (/api/users) usando o Firebase Admin.
+ * Cria contas via INSTÂNCIA SECUNDÁRIA do Firebase (não desloga o admin atual)
+ * e grava as permissões no Firestore usando a instância principal (db).
+ * Lista os usuários em tempo real via onSnapshot.
  */
 export default function GerenciarAcessos() {
   const [list, setList] = useState([]);
@@ -18,80 +26,78 @@ export default function GerenciarAcessos() {
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
 
-  const authedFetch = useCallback(async (options = {}) => {
-    const token = await auth.currentUser?.getIdToken();
-    return fetch("/api/users", {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token || ""}`,
-        ...(options.headers || {}),
+  // Listagem em tempo real da coleção "users".
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, "users"),
+      (snap) => {
+        setList(snap.docs.map((d) => ({ uid: d.id, ...d.data() })));
+        setLoadingList(false);
       },
-    });
+      (err) => {
+        setError(`Falha ao listar acessos: ${err.message}`);
+        setLoadingList(false);
+      }
+    );
+    return () => unsub();
   }, []);
 
-  const load = useCallback(async () => {
-    setLoadingList(true);
-    setError("");
-    try {
-      const res = await authedFetch({ method: "GET" });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Falha ao listar acessos.");
-      setList(json.users || []);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoadingList(false);
-    }
-  }, [authedFetch]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const isAdminRole = form.role === "admin";
+  // Para Administrador, a pipeline é fixada em "all" (campo desabilitado).
+  const pipelineValue = isAdminRole ? "all" : form.pipeline;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setOk("");
     setSubmitting(true);
-    try {
-      const payload = {
-        email: form.email.trim(),
-        password: form.password,
-        role: form.role,
-        pipeline: form.role === "unit" ? form.pipeline.trim() : "",
-      };
-      const res = await authedFetch({
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Falha ao criar acesso.");
-      setOk(`Acesso criado para ${payload.email}.`);
-      setForm(EMPTY_FORM);
-      load();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
-  const handleDelete = async (uid, email) => {
-    if (!window.confirm(`Excluir o acesso de ${email}?`)) return;
-    setError("");
-    setOk("");
+    const email = form.email.trim();
+    const pipeline = isAdminRole ? "all" : form.pipeline.trim();
+
+    if (!isAdminRole && !pipeline) {
+      setError("Informe a pipeline da unidade.");
+      setSubmitting(false);
+      return;
+    }
+
+    // Instância secundária dedicada (nome único) — isola a sessão do novo usuário.
+    const secondaryApp = initializeApp(firebaseConfig, `secondary-${Date.now()}`);
+    const secondaryAuth = getAuth(secondaryApp);
+
     try {
-      const res = await authedFetch({
-        method: "DELETE",
-        body: JSON.stringify({ uid }),
+      const cred = await createUserWithEmailAndPassword(
+        secondaryAuth,
+        email,
+        form.password
+      );
+      const uid = cred.user.uid;
+
+      // Permissões no Firestore (instância principal), id do doc = UID.
+      await setDoc(doc(db, "users", uid), {
+        email,
+        role: form.role,
+        pipeline,
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Falha ao excluir acesso.");
-      setOk("Acesso excluído.");
-      load();
-    } catch (e) {
-      setError(e.message);
+
+      await signOut(secondaryAuth);
+      setOk(`Acesso criado para ${email}.`);
+      setForm(EMPTY_FORM);
+    } catch (err) {
+      const code = err?.code || "";
+      if (code === "auth/email-already-in-use") {
+        setError("E-mail já cadastrado.");
+      } else if (code === "auth/weak-password") {
+        setError("Senha fraca (mínimo de 6 caracteres).");
+      } else if (code === "auth/invalid-email") {
+        setError("E-mail inválido.");
+      } else {
+        setError(err?.message || "Falha ao criar acesso.");
+      }
+    } finally {
+      // Remove a instância secundária para não acumular apps.
+      await deleteApp(secondaryApp).catch(() => {});
+      setSubmitting(false);
     }
   };
 
@@ -109,7 +115,10 @@ export default function GerenciarAcessos() {
           Cadastre administradores e unidades franqueadas
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <form
+          onSubmit={handleSubmit}
+          className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"
+        >
           <label className="block">
             <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
               E-mail
@@ -155,13 +164,13 @@ export default function GerenciarAcessos() {
 
           <label className="block">
             <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Pipeline no CRM
+              Loja / Pipeline no CRM
             </span>
             <input
               type="text"
-              required={form.role === "unit"}
-              disabled={form.role !== "unit"}
-              value={form.pipeline}
+              required={!isAdminRole}
+              disabled={isAdminRole}
+              value={pipelineValue}
               onChange={(e) => setForm({ ...form, pipeline: e.target.value })}
               className={`mt-1 ${inputClass} disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800/50`}
               placeholder="Ex.: Velot Campinas"
@@ -190,10 +199,10 @@ export default function GerenciarAcessos() {
         </form>
       </div>
 
-      {/* Listagem */}
+      {/* Listagem de usuários ativos */}
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-          Acessos cadastrados ({list.length})
+          Usuários ativos ({list.length})
         </h3>
 
         {loadingList ? (
@@ -202,13 +211,12 @@ export default function GerenciarAcessos() {
           </div>
         ) : list.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-left text-sm">
+            <table className="w-full min-w-[480px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:text-slate-400">
                   <th className="py-2 pr-4 font-semibold">E-mail</th>
                   <th className="py-2 pr-4 font-semibold">Cargo</th>
-                  <th className="py-2 pr-4 font-semibold">Pipeline</th>
-                  <th className="py-2 text-right font-semibold">Ações</th>
+                  <th className="py-2 font-semibold">Pipeline</th>
                 </tr>
               </thead>
               <tbody>
@@ -223,18 +231,8 @@ export default function GerenciarAcessos() {
                     <td className="py-2.5 pr-4 text-slate-600 dark:text-slate-300">
                       {u.role === "admin" ? "Administrador" : "Unidade"}
                     </td>
-                    <td className="py-2.5 pr-4 text-slate-600 dark:text-slate-300">
+                    <td className="py-2.5 text-slate-600 dark:text-slate-300">
                       {u.pipeline || "—"}
-                    </td>
-                    <td className="py-2.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(u.uid, u.email)}
-                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
-                      >
-                        <Trash2 size={14} />
-                        Excluir
-                      </button>
                     </td>
                   </tr>
                 ))}
@@ -243,7 +241,7 @@ export default function GerenciarAcessos() {
           </div>
         ) : (
           <div className="flex h-24 items-center justify-center text-sm text-slate-400 dark:text-slate-500">
-            Nenhum acesso cadastrado.
+            Nenhum usuário cadastrado.
           </div>
         )}
       </div>
