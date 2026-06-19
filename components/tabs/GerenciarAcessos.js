@@ -18,13 +18,15 @@ const EMPTY_FORM = { email: "", password: "", role: "unit", pipeline: "" };
  * e grava as permissões no Firestore usando a instância principal (db).
  * Lista os usuários em tempo real via onSnapshot.
  */
-export default function GerenciarAcessos() {
+export default function GerenciarAcessos({ pipelines = [] }) {
   const [list, setList] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
+  // Quando a unidade não está na lista do CRM, permite digitar manualmente.
+  const [customPipeline, setCustomPipeline] = useState(false);
 
   // Listagem em tempo real da coleção "users".
   useEffect(() => {
@@ -43,8 +45,6 @@ export default function GerenciarAcessos() {
   }, []);
 
   const isAdminRole = form.role === "admin";
-  // Para Administrador, a pipeline é fixada em "all" (campo desabilitado).
-  const pipelineValue = isAdminRole ? "all" : form.pipeline;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -83,6 +83,7 @@ export default function GerenciarAcessos() {
       await signOut(secondaryAuth);
       setOk(`Acesso criado para ${email}.`);
       setForm(EMPTY_FORM);
+      setCustomPipeline(false);
     } catch (err) {
       const code = err?.code || "";
       if (code === "auth/email-already-in-use") {
@@ -154,7 +155,10 @@ export default function GerenciarAcessos() {
             </span>
             <select
               value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              onChange={(e) => {
+                setCustomPipeline(false);
+                setForm({ ...form, role: e.target.value, pipeline: "" });
+              }}
               className={`mt-1 ${inputClass}`}
             >
               <option value="unit">Unidade (Franquia)</option>
@@ -164,17 +168,58 @@ export default function GerenciarAcessos() {
 
           <label className="block">
             <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Loja / Pipeline no CRM
+              Loja / Unidade (CRM)
             </span>
-            <input
-              type="text"
-              required={!isAdminRole}
-              disabled={isAdminRole}
-              value={pipelineValue}
-              onChange={(e) => setForm({ ...form, pipeline: e.target.value })}
-              className={`mt-1 ${inputClass} disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800/50`}
-              placeholder="Ex.: Velot Campinas"
-            />
+
+            {isAdminRole ? (
+              <input
+                type="text"
+                disabled
+                value="all"
+                className={`mt-1 ${inputClass} disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800/50`}
+              />
+            ) : (
+              <>
+                <select
+                  required
+                  value={customPipeline ? "__custom__" : form.pipeline}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "__custom__") {
+                      setCustomPipeline(true);
+                      setForm({ ...form, pipeline: "" });
+                    } else {
+                      setCustomPipeline(false);
+                      setForm({ ...form, pipeline: v });
+                    }
+                  }}
+                  className={`mt-1 ${inputClass}`}
+                >
+                  <option value="" disabled>
+                    {pipelines.length
+                      ? "Selecione a unidade…"
+                      : "Carregando unidades…"}
+                  </option>
+                  {pipelines.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                  <option value="__custom__">Outra (digitar manualmente)…</option>
+                </select>
+
+                {customPipeline && (
+                  <input
+                    type="text"
+                    required
+                    value={form.pipeline}
+                    onChange={(e) => setForm({ ...form, pipeline: e.target.value })}
+                    className={`mt-2 ${inputClass}`}
+                    placeholder="Nome EXATO da pipeline no CRM"
+                  />
+                )}
+              </>
+            )}
           </label>
 
           <div className="sm:col-span-2">

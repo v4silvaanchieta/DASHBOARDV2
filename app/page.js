@@ -379,7 +379,7 @@ export default function DashboardPage() {
         <main className="space-y-6 p-6">
           {activeTab === "gerenciar-acessos" ? (
             isAdmin ? (
-              <GerenciarAcessos />
+              <GerenciarAcessos pipelines={pipelineOptions} />
             ) : (
               <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                 Acesso restrito a administradores.
