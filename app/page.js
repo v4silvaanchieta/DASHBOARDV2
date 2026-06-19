@@ -51,6 +51,7 @@ import {
 } from "@/lib/crossref";
 import { computeProductRevenue } from "@/lib/products";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 /**
  * Calcula o badge de variação (Δ%) entre o valor atual e o de comparação.
@@ -80,7 +81,8 @@ export default function DashboardPage() {
   const { data, leadsSdr, loading, error, lastUpdated } = useDashboardData();
 
   // RBAC / Data Siloing: perfil do usuário (admin vê tudo; unit vê só sua pipeline).
-  const { userData } = useAuth();
+  const { userData, logout } = useAuth();
+  const router = useRouter();
   const isUnit = userData?.role === "unit" && Boolean(userData?.pipeline);
   const isAdmin = userData?.role === "admin";
   const unitPipeline = userData?.pipeline ?? "";
@@ -358,6 +360,32 @@ export default function DashboardPage() {
 
   const activeLabel =
     MENU_ITEMS.find((m) => m.id === activeTab)?.label ?? "Dashboard";
+
+  // Sem documento de permissão = SEM ACESSO (mesmo autenticado).
+  // Fecha o vazamento de dados para usuários revogados/não configurados.
+  if (!userData) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 px-4 text-center dark:bg-slate-950">
+        <p className="text-base font-semibold text-slate-900 dark:text-slate-50">
+          Acesso não liberado
+        </p>
+        <p className="max-w-sm text-sm text-slate-500 dark:text-slate-400">
+          Sua conta ainda não tem um perfil de acesso configurado (ou foi
+          revogada). Solicite a um administrador da Velot que libere seu acesso.
+        </p>
+        <button
+          type="button"
+          onClick={async () => {
+            await logout();
+            router.replace("/login");
+          }}
+          className="rounded-lg bg-[#DC0032] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#b8002a]"
+        >
+          Sair
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>
