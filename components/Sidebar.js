@@ -15,6 +15,7 @@ export const MENU_ITEMS = [
   { id: "campanhas", label: "Campanhas", icon: "📣" },
   { id: "relatorios", label: "Relatórios", icon: "📈" },
   { id: "configuracoes", label: "Configurações", icon: "⚙️" },
+  { id: "perfil", label: "Meu Perfil", icon: "👤" },
   { id: "gerenciar-acessos", label: "Gerenciar Acessos", icon: "🔐", adminOnly: true },
 ];
 

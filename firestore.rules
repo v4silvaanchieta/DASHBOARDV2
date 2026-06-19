@@ -25,9 +25,17 @@ service cloud.firestore {
       //  - admin pode ler qualquer documento (auditoria / listagem).
       allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
 
-      // ESCRITA (create / update / delete):
-      //  - exclusiva de administradores (cadastro e segmentação de contas).
-      allow write: if isAdmin();
+      // CRIAÇÃO / EXCLUSÃO: exclusivas de administradores.
+      allow create, delete: if isAdmin();
+
+      // ATUALIZAÇÃO:
+      //  - admin pode tudo;
+      //  - o próprio usuário pode editar o seu doc (ex.: campo `name`) DESDE QUE
+      //    NÃO altere role nem pipeline (impede escalonamento de privilégio).
+      allow update: if isAdmin()
+        || (request.auth.uid == userId
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.pipeline == resource.data.pipeline);
     }
 
     // Demais coleções: negadas por padrão (segurança por omissão).

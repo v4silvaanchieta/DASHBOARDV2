@@ -19,6 +19,7 @@ import ProdutosTab from "@/components/tabs/ProdutosTab";
 import RelatoriosTab from "@/components/tabs/RelatoriosTab";
 import ConfiguracoesTab from "@/components/tabs/ConfiguracoesTab";
 import GerenciarAcessos from "@/components/tabs/GerenciarAcessos";
+import PerfilTab from "@/components/tabs/PerfilTab";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import {
   applyFilters,
@@ -413,6 +414,8 @@ export default function DashboardPage() {
                 Acesso restrito a administradores.
               </div>
             )
+          ) : activeTab === "perfil" ? (
+            <PerfilTab />
           ) : (
             <>
           {/* Filtros globais — sempre no topo, afetam todas as abas */}
