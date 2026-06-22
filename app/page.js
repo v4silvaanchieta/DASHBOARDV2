@@ -483,11 +483,22 @@ export default function DashboardPage() {
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <KpiCard
                       label="Entrada SDR IA"
-                      value={filteredLeadsSdr.length.toLocaleString("pt-BR")}
+                      value={(isUnit
+                        ? metrics.leadsUnicos
+                        : filteredLeadsSdr.length
+                      ).toLocaleString("pt-BR")}
                       icon="🤖"
                       accent="indigo"
-                      delta={makeDelta(filteredLeadsSdr.length, compareSdrCount)}
-                      hint={prevHint(compareSdrCount, fmtCount)}
+                      delta={
+                        isUnit
+                          ? makeDelta(metrics.leadsUnicos, compareMetrics?.leadsUnicos)
+                          : makeDelta(filteredLeadsSdr.length, compareSdrCount)
+                      }
+                      hint={
+                        isUnit
+                          ? "Leads da unidade no CRM (roteados por cidade)"
+                          : prevHint(compareSdrCount, fmtCount)
+                      }
                     />
                     <KpiCard
                       label="Leads Recebidos"
@@ -501,13 +512,20 @@ export default function DashboardPage() {
                             ).toLocaleString("pt-BR")} duplicados removidos)`
                           : prevHint(compareMetrics?.leadsUnicos, fmtCount)
                       }
-                      extra={`Conversão SDR IA → CRM: ${
-                        filteredLeadsSdr.length > 0
-                          ? `${((generation.matched / filteredLeadsSdr.length) * 100)
-                              .toFixed(1)
-                              .replace(".", ",")}%`
-                          : "—"
-                      }`}
+                      extra={
+                        isUnit
+                          ? null
+                          : `Conversão SDR IA → CRM: ${
+                              filteredLeadsSdr.length > 0
+                                ? `${(
+                                    (generation.matched / filteredLeadsSdr.length) *
+                                    100
+                                  )
+                                    .toFixed(1)
+                                    .replace(".", ",")}%`
+                                : "—"
+                            }`
+                      }
                     />
                     <KpiCard
                       label="Faturamento Realizado"
