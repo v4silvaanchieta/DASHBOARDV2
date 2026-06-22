@@ -178,7 +178,7 @@ export default function RelatoriosTab({ recebidosCount, qualificadosCount, rows 
           value={recebidosCount.toLocaleString("pt-BR")}
           icon="🤖"
           accent="indigo"
-          hint="Total recebido no período · entrada via SDR/IA"
+          hint="Leads únicos no período · mesma base do CRM"
         />
         <KpiCard
           label="Qualificados e Enviados às Lojas"
@@ -210,8 +210,8 @@ export default function RelatoriosTab({ recebidosCount, qualificadosCount, rows 
               Matriz Analítica por Unidade
             </h2>
             <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-              Funil aberto + ganhos/perdidos + higiene · ordenado por{" "}
-              {activeCol?.label} ({dirText})
+              Negócios/cards no CRM (operacional, conta re-entradas) · ordenado
+              por {activeCol?.label} ({dirText})
             </p>
           </div>
           <div className="flex items-center gap-2">

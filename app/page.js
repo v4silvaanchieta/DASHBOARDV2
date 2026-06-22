@@ -32,6 +32,8 @@ import {
 import {
   computeMetrics,
   computeSLA,
+  countUniqueLeads,
+  isQualifiedLead,
   formatBRL,
   SLA_TARGET_MINUTES,
 } from "@/lib/metrics";
@@ -257,25 +259,19 @@ export default function DashboardPage() {
     [filteredData, settings.penalties]
   );
 
-  // Resumo executivo da aba Relatórios. Sai EXCLUSIVAMENTE do storeReport (logo,
-  // do filteredData já enjaulado na pipeline da unidade e filtrado por data),
-  // somando as MESMAS colunas da Matriz — cards e tabela reconciliam (sem
-  // vazamento de escopo nem fonte incompatível):
-  //  - Recebidos no SDR IA   = total que entrou no período (todos via SDR/IA);
-  //  - Qualificados/enviados = avançaram da pré-qualificação para o comercial
-  //    (novos leads + triagem + análise + faturamento + ganhos) ≤ Recebidos.
+  // Resumo executivo da aba Relatórios. Usa a MESMA base do menu principal:
+  // leads ÚNICOS do CRM (deduplicados por contato) sobre o filteredData já
+  // enjaulado na pipeline da unidade e filtrado por data. Assim o número bate
+  // com a Visão Geral (sem contar re-entradas do mesmo lead):
+  //  - Recebidos no SDR IA   = leads únicos recebidos no período (= CRM);
+  //  - Qualificados/enviados = leads únicos que avançaram da pré-qualificação
+  //    para o comercial (ver isQualifiedLead) ≤ Recebidos.
   const relatoriosResumo = useMemo(
-    () =>
-      storeReport.reduce(
-        (a, r) => {
-          a.recebidos += r.totalLeads;
-          a.qualificados +=
-            r.novosLeads + r.triagem + r.analise + r.faturamento + r.ganhos;
-          return a;
-        },
-        { recebidos: 0, qualificados: 0 }
-      ),
-    [storeReport]
+    () => ({
+      recebidos: countUniqueLeads(filteredData),
+      qualificados: countUniqueLeads(filteredData.filter(isQualifiedLead)),
+    }),
+    [filteredData]
   );
 
   // Nota geral: MÉDIA PONDERADA pelo volume de leads das unidades ativas.
