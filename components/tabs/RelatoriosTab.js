@@ -82,16 +82,24 @@ function SortIcon({ active, direction }) {
 /**
  * Aba "Relatórios" — Relatório Gerencial Consolidado.
  *
- * @param {{ sdrCount: number, dealsCount: number, rows: Array<Object> }} props
+ * Os dois números do resumo são SOMAS das colunas da Matriz (mesma fonte
+ * filteredData, já isolada por unidade e filtrada por data), garantindo que o
+ * topo reconcilie com a tabela e que a conversão seja sempre ≤ 100%:
+ *  - recebidosCount    = total de leads recebidos no período (entrada SDR/IA);
+ *  - qualificadosCount = subconjunto que avançou ao comercial (≤ recebidos).
+ *
+ * @param {{ recebidosCount: number, qualificadosCount: number, rows: Array<Object> }} props
  */
-export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
+export default function RelatoriosTab({ recebidosCount, qualificadosCount, rows }) {
   const [copied, setCopied] = useState(false);
   // Ordenação nativa via clique no cabeçalho (padrão: pior Score primeiro).
   const [sortField, setSortField] = useState("score");
   const [sortDirection, setSortDirection] = useState("asc");
 
   const conversion =
-    sdrCount > 0 ? ((dealsCount / sdrCount) * 100).toFixed(1).replace(".", ",") : "0";
+    recebidosCount > 0
+      ? ((qualificadosCount / recebidosCount) * 100).toFixed(1).replace(".", ",")
+      : "0";
 
   // Ordena uma CÓPIA das linhas (string -> localeCompare, número -> diff).
   const sortedRows = useMemo(() => {
@@ -167,30 +175,30 @@ export default function RelatoriosTab({ sdrCount, dealsCount, rows }) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <KpiCard
           label="Leads Recebidos no SDR IA"
-          value={sdrCount.toLocaleString("pt-BR")}
+          value={recebidosCount.toLocaleString("pt-BR")}
           icon="🤖"
           accent="indigo"
-          hint="Aba LEADS SDR · período filtrado"
+          hint="Total recebido no período · entrada via SDR/IA"
         />
         <KpiCard
           label="Qualificados e Enviados às Lojas"
-          value={dealsCount.toLocaleString("pt-BR")}
+          value={qualificadosCount.toLocaleString("pt-BR")}
           icon="🏪"
           accent="emerald"
-          hint="Deals distribuídos às pipelines (CRM)"
+          hint="Avançaram da pré-qualificação para o comercial"
         />
       </div>
 
       <p className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
         Dos{" "}
         <span className="font-semibold text-slate-900 dark:text-slate-50">
-          {sdrCount.toLocaleString("pt-BR")}
+          {recebidosCount.toLocaleString("pt-BR")}
         </span>{" "}
-        leads que entraram no SDR IA,{" "}
+        leads recebidos no SDR IA,{" "}
         <span className="font-semibold text-slate-900 dark:text-slate-50">
-          {dealsCount.toLocaleString("pt-BR")}
+          {qualificadosCount.toLocaleString("pt-BR")}
         </span>{" "}
-        avançaram para o CRM comercial (
+        foram qualificados e enviados às lojas (
         <span className="font-semibold text-velot">{conversion}%</span>).
       </p>
 

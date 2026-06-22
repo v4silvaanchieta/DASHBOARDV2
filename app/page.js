@@ -257,6 +257,27 @@ export default function DashboardPage() {
     [filteredData, settings.penalties]
   );
 
+  // Resumo executivo da aba Relatórios. Sai EXCLUSIVAMENTE do storeReport (logo,
+  // do filteredData já enjaulado na pipeline da unidade e filtrado por data),
+  // somando as MESMAS colunas da Matriz — cards e tabela reconciliam (sem
+  // vazamento de escopo nem fonte incompatível):
+  //  - Recebidos no SDR IA   = total que entrou no período (todos via SDR/IA);
+  //  - Qualificados/enviados = avançaram da pré-qualificação para o comercial
+  //    (novos leads + triagem + análise + faturamento + ganhos) ≤ Recebidos.
+  const relatoriosResumo = useMemo(
+    () =>
+      storeReport.reduce(
+        (a, r) => {
+          a.recebidos += r.totalLeads;
+          a.qualificados +=
+            r.novosLeads + r.triagem + r.analise + r.faturamento + r.ganhos;
+          return a;
+        },
+        { recebidos: 0, qualificados: 0 }
+      ),
+    [storeReport]
+  );
+
   // Nota geral: MÉDIA PONDERADA pelo volume de leads das unidades ativas.
   // Score Geral = Σ(score_loja * leads_loja) / Σ(leads_loja das lojas ativas).
   const activeStores = useMemo(
@@ -580,8 +601,8 @@ export default function DashboardPage() {
               {/* === RELATÓRIOS === */}
               {activeTab === "relatorios" && (
                 <RelatoriosTab
-                  sdrCount={filteredLeadsSdr.length}
-                  dealsCount={filteredData.length}
+                  recebidosCount={relatoriosResumo.recebidos}
+                  qualificadosCount={relatoriosResumo.qualificados}
                   rows={storeReport}
                 />
               )}
