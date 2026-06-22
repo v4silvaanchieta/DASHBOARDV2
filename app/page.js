@@ -25,6 +25,7 @@ import {
   applyFilters,
   getUniqueValues,
   passesDateFilter,
+  previousPeriodFilters,
   DATE_RANGE_DEFAULT,
   PIPELINE_ALL,
   SOURCE_ALL,
@@ -78,6 +79,15 @@ function makeDelta(current, compare, goodWhenDown = false) {
   };
 }
 
+const fmtCount = (n) => Number(n || 0).toLocaleString("pt-BR");
+const fmtPct = (n) => `${Number(n || 0).toFixed(1).replace(".", ",")}%`;
+
+/** Texto comparativo "vs [valor anterior] no período anterior" (ou undefined). */
+function prevHint(previous, fmt) {
+  if (previous == null) return undefined;
+  return `vs ${fmt(previous)} no período anterior`;
+}
+
 export default function DashboardPage() {
   const { data, leadsSdr, loading, error, lastUpdated } = useDashboardData();
 
@@ -129,11 +139,6 @@ export default function DashboardPage() {
     source: SOURCE_ALL,
     customStart: "",
     customEnd: "",
-    // Comparação de períodos (usa a mesma Loja/Origem, outro período).
-    compareEnabled: false,
-    compareDateRange: "all",
-    compareCustomStart: "",
-    compareCustomEnd: "",
   });
 
   // ISOLAMENTO NA RAIZ: para perfil "unit", retém APENAS registros da pipeline da
@@ -183,34 +188,25 @@ export default function DashboardPage() {
     [filteredData, settings.slaTargetMinutes]
   );
 
-  // Período de comparação (mesma Loja/Origem, data diferente) — só quando ativo.
-  // Também respeita o escopo da unidade (scopedData + pipeline forçada).
-  const compareData = useMemo(() => {
-    if (!filters.compareEnabled) return null;
-    const eff = {
-      ...filters,
-      dateRange: filters.compareDateRange,
-      customStart: filters.compareCustomStart,
-      customEnd: filters.compareCustomEnd,
-    };
-    if (isUnit) eff.pipeline = unitPipeline;
-    return applyFilters(scopedData, eff);
+  // PERÍODO ANTERIOR (Period-over-Period): mesma duração imediatamente antes do
+  // período atual, respeitando o isolamento de loja/unidade. null = sem comparação.
+  const compareMetrics = useMemo(() => {
+    const pf = previousPeriodFilters(filters);
+    if (!pf) return null;
+    const eff = isUnit ? { ...pf, pipeline: unitPipeline } : pf;
+    return computeMetrics(applyFilters(scopedData, eff));
   }, [scopedData, filters, isUnit, unitPipeline]);
-  const compareMetrics = useMemo(
-    () => (compareData ? computeMetrics(compareData) : null),
-    [compareData]
-  );
+
   const compareSdrCount = useMemo(() => {
-    if (!filters.compareEnabled) return null;
-    const cf = {
-      dateRange: filters.compareDateRange,
-      customStart: filters.compareCustomStart,
-      customEnd: filters.compareCustomEnd,
-    };
-    const byDate = leadsSdr.filter((l) => passesDateFilter(l.data, cf));
-    if (!isUnit || !compareData) return byDate.length;
+    const pf = previousPeriodFilters(filters);
+    if (!pf) return null;
+    const byDate = leadsSdr.filter((l) => passesDateFilter(l.data, pf));
+    if (!isUnit) return byDate.length;
+    // Para unidade, cruza com os deals da própria pipeline no período anterior.
+    const eff = { ...pf, pipeline: unitPipeline };
+    const prevDeals = applyFilters(scopedData, eff);
     const phones = new Set();
-    for (const d of compareData) {
+    for (const d of prevDeals) {
       for (const p of [d.telefone, d.cfTelefone]) {
         const k = phoneKey(p);
         if (k) phones.add(k);
@@ -220,7 +216,7 @@ export default function DashboardPage() {
       const k = phoneKey(l.telefone);
       return k && phones.has(k);
     }).length;
-  }, [leadsSdr, filters, isUnit, compareData]);
+  }, [scopedData, leadsSdr, filters, isUnit, unitPipeline]);
   const funnelData = useMemo(() => computeFunnel(filteredData), [filteredData]);
   const lossAnalysis = useMemo(
     () => computeLossAnalysis(filteredData),
@@ -471,76 +467,53 @@ export default function DashboardPage() {
                     vendas={metrics.vendasRealizadas}
                   />
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <KpiCard
                       label="Entrada SDR IA"
                       value={filteredLeadsSdr.length.toLocaleString("pt-BR")}
                       icon="🤖"
                       accent="indigo"
-                      hint="Leads da aba LEADS SDR (período filtrado)"
                       delta={makeDelta(filteredLeadsSdr.length, compareSdrCount)}
+                      hint={prevHint(compareSdrCount, fmtCount)}
                     />
                     <KpiCard
-                      label="Leads (Deals)"
+                      label="Leads Recebidos"
                       value={metrics.leadsGerados.toLocaleString("pt-BR")}
                       icon="👥"
-                      hint="Total de deals filtrados"
                       delta={makeDelta(metrics.leadsGerados, compareMetrics?.leadsGerados)}
+                      hint={prevHint(compareMetrics?.leadsGerados, fmtCount)}
                     />
                     <KpiCard
                       label="Faturamento Realizado"
                       value={formatBRL(metrics.faturamento)}
                       icon="💰"
                       accent="emerald"
-                      hint="Soma de QUANTIA · STATUS ganho"
                       delta={makeDelta(metrics.faturamento, compareMetrics?.faturamento)}
+                      hint={prevHint(compareMetrics?.faturamento, formatBRL)}
                     />
                     <KpiCard
                       label="Faturamento Perdido"
                       value={formatBRL(metrics.faturamentoPerdido)}
                       icon="💸"
                       accent="red"
-                      hint="Soma de QUANTIA · STATUS perdido"
                       delta={makeDelta(
                         metrics.faturamentoPerdido,
                         compareMetrics?.faturamentoPerdido,
                         true
                       )}
+                      hint={prevHint(compareMetrics?.faturamentoPerdido, formatBRL)}
                     />
                     <KpiCard
-                      label="Vendas Realizadas"
-                      value={metrics.vendasRealizadas.toLocaleString("pt-BR")}
-                      icon="✅"
-                      accent="emerald"
-                      hint="STATUS ganho"
-                      delta={makeDelta(
-                        metrics.vendasRealizadas,
-                        compareMetrics?.vendasRealizadas
-                      )}
-                    />
-                    <KpiCard
-                      label="Vendas Perdidas"
-                      value={metrics.vendasPerdidas.toLocaleString("pt-BR")}
-                      icon="❌"
-                      accent="red"
-                      hint="STATUS perdido"
-                      delta={makeDelta(
-                        metrics.vendasPerdidas,
-                        compareMetrics?.vendasPerdidas,
-                        true
-                      )}
-                    />
-                    <KpiCard
-                      label="Leads Parados"
+                      label="Leads Estagnados"
                       value={metrics.leadsParados.toLocaleString("pt-BR")}
                       icon="⏳"
                       accent="amber"
-                      hint="Pré-Qualificação/Prospecção há mais de 48h"
                       delta={makeDelta(
                         metrics.leadsParados,
                         compareMetrics?.leadsParados,
                         true
                       )}
+                      hint={prevHint(compareMetrics?.leadsParados, fmtCount)}
                     />
                     <KpiCard
                       label="Taxa de Conversão"
@@ -548,11 +521,11 @@ export default function DashboardPage() {
                         .toFixed(1)
                         .replace(".", ",")}%`}
                       icon="📈"
-                      hint="Vendas / Deals filtrados"
                       delta={makeDelta(
                         metrics.taxaConversao,
                         compareMetrics?.taxaConversao
                       )}
+                      hint={prevHint(compareMetrics?.taxaConversao, fmtPct)}
                     />
                   </div>
 
