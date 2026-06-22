@@ -470,10 +470,16 @@ export default function DashboardPage() {
                     />
                     <KpiCard
                       label="Leads Recebidos"
-                      value={metrics.leadsGerados.toLocaleString("pt-BR")}
+                      value={metrics.leadsUnicos.toLocaleString("pt-BR")}
                       icon="👥"
-                      delta={makeDelta(metrics.leadsGerados, compareMetrics?.leadsGerados)}
-                      hint={prevHint(compareMetrics?.leadsGerados, fmtCount)}
+                      delta={makeDelta(metrics.leadsUnicos, compareMetrics?.leadsUnicos)}
+                      hint={
+                        metrics.leadsGerados > metrics.leadsUnicos
+                          ? `Únicos (${(
+                              metrics.leadsGerados - metrics.leadsUnicos
+                            ).toLocaleString("pt-BR")} duplicados removidos)`
+                          : prevHint(compareMetrics?.leadsUnicos, fmtCount)
+                      }
                       extra={`Conversão SDR IA → CRM: ${
                         filteredLeadsSdr.length > 0
                           ? `${((generation.matched / filteredLeadsSdr.length) * 100)
