@@ -7,7 +7,6 @@ import FilterBar from "@/components/FilterBar";
 import KpiCard from "@/components/KpiCard";
 import SlaCard from "@/components/SlaCard";
 import SalesFunnelChart from "@/components/SalesFunnelChart";
-import ConversionStrip from "@/components/ConversionStrip";
 import LossPieChart from "@/components/LossPieChart";
 import StoreHygieneTable from "@/components/StoreHygieneTable";
 import ScoreGauge from "@/components/ScoreGauge";
@@ -460,13 +459,6 @@ export default function DashboardPage() {
               {/* === VISÃO GERAL === */}
               {activeTab === "visao-geral" && (
                 <>
-                  {/* Faixa de conversão: SDR IA -> Deals -> Vendas */}
-                  <ConversionStrip
-                    sdr={filteredLeadsSdr.length}
-                    deals={metrics.leadsGerados}
-                    vendas={metrics.vendasRealizadas}
-                  />
-
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <KpiCard
                       label="Entrada SDR IA"
@@ -482,6 +474,13 @@ export default function DashboardPage() {
                       icon="👥"
                       delta={makeDelta(metrics.leadsGerados, compareMetrics?.leadsGerados)}
                       hint={prevHint(compareMetrics?.leadsGerados, fmtCount)}
+                      extra={`Conversão SDR IA → CRM: ${
+                        filteredLeadsSdr.length > 0
+                          ? `${((metrics.leadsGerados / filteredLeadsSdr.length) * 100)
+                              .toFixed(1)
+                              .replace(".", ",")}%`
+                          : "—"
+                      }`}
                     />
                     <KpiCard
                       label="Faturamento Realizado"

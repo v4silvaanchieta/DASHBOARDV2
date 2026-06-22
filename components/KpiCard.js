@@ -12,6 +12,7 @@
  *   hint?: string,
  *   accent?: "slate" | "emerald" | "red" | "indigo" | "amber",
  *   delta?: { label: string, tone: "good" | "bad" | "neutral" } | null,
+ *   extra?: React.ReactNode,
  * }} props
  */
 export default function KpiCard({
@@ -21,6 +22,7 @@ export default function KpiCard({
   hint,
   accent = "slate",
   delta = null,
+  extra = null,
 }) {
   const accents = {
     slate: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
@@ -71,6 +73,11 @@ export default function KpiCard({
         )}
       </div>
       {hint && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>}
+      {extra && (
+        <p className="mt-1.5 rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+          {extra}
+        </p>
+      )}
     </div>
   );
 }
