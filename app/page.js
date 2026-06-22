@@ -476,7 +476,7 @@ export default function DashboardPage() {
                       hint={prevHint(compareMetrics?.leadsGerados, fmtCount)}
                       extra={`Conversão SDR IA → CRM: ${
                         filteredLeadsSdr.length > 0
-                          ? `${((metrics.leadsGerados / filteredLeadsSdr.length) * 100)
+                          ? `${((generation.matched / filteredLeadsSdr.length) * 100)
                               .toFixed(1)
                               .replace(".", ",")}%`
                           : "—"
