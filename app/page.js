@@ -14,6 +14,7 @@ import MarketingSection from "@/components/MarketingSection";
 import SourceCrossSection from "@/components/SourceCrossSection";
 import StagnantAlert from "@/components/StagnantAlert";
 import NegociosTab from "@/components/tabs/NegociosTab";
+import Campanhas from "@/components/tabs/Campanhas";
 import ProdutosTab from "@/components/tabs/ProdutosTab";
 import RelatoriosTab from "@/components/tabs/RelatoriosTab";
 import ConfiguracoesTab from "@/components/tabs/ConfiguracoesTab";
@@ -634,16 +635,23 @@ export default function DashboardPage() {
                 <ProdutosTab products={products} isDark={isDark} />
               )}
 
-              {/* === CAMPANHAS (Marketing) === */}
+              {/* === CAMPANHAS (Tráfego Pago + Marketing) === */}
               {activeTab === "campanhas" && (
-                <MarketingSection
-                  campaigns={campaigns}
-                  aiEfficiency={aiEfficiency}
-                  leadsCount={metrics.leadsGerados}
-                  revenue={metrics.faturamento}
-                  spend={campaignSpend}
-                  paidCampaignsCount={filteredCampaignsData.length}
-                />
+                <>
+                  <Campanhas
+                    campaigns={filteredCampaignsData}
+                    isUnit={isUnit}
+                    unitPipeline={unitPipeline}
+                  />
+                  <MarketingSection
+                    campaigns={campaigns}
+                    aiEfficiency={aiEfficiency}
+                    leadsCount={metrics.leadsGerados}
+                    revenue={metrics.faturamento}
+                    spend={campaignSpend}
+                    paidCampaignsCount={filteredCampaignsData.length}
+                  />
+                </>
               )}
 
               {/* === RELATÓRIOS === */}
