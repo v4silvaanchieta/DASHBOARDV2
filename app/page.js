@@ -55,41 +55,9 @@ import {
 } from "@/lib/crossref";
 import { computeProductRevenue } from "@/lib/products";
 import { campaignMatchesPipeline } from "@/lib/campaigns";
+import { makeDelta, fmtCount, fmtPct, prevHint } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-
-/**
- * Calcula o badge de variação (Δ%) entre o valor atual e o de comparação.
- * `goodWhenDown` inverte a cor para métricas em que cair é bom (perdas, parados).
- * Retorna null quando não há período de comparação.
- */
-function makeDelta(current, compare, goodWhenDown = false) {
-  if (compare == null) return null;
-  if (compare === 0) {
-    if (!current) return { label: "0%", tone: "neutral" };
-    return { label: "novo", tone: goodWhenDown ? "bad" : "good" };
-  }
-  const pct = ((current - compare) / compare) * 100;
-  const up = pct > 0.05;
-  const down = pct < -0.05;
-  const arrow = up ? "▲" : down ? "▼" : "•";
-  let tone = "neutral";
-  if (up) tone = goodWhenDown ? "bad" : "good";
-  else if (down) tone = goodWhenDown ? "good" : "bad";
-  return {
-    label: `${arrow} ${Math.abs(pct).toFixed(1).replace(".", ",")}%`,
-    tone,
-  };
-}
-
-const fmtCount = (n) => Number(n || 0).toLocaleString("pt-BR");
-const fmtPct = (n) => `${Number(n || 0).toFixed(1).replace(".", ",")}%`;
-
-/** Texto comparativo "vs [valor anterior] no período anterior" (ou undefined). */
-function prevHint(previous, fmt) {
-  if (previous == null) return undefined;
-  return `vs ${fmt(previous)} no período anterior`;
-}
 
 export default function DashboardPage() {
   const { data, leadsSdr, campaignsData, loading, error, lastUpdated } =
@@ -214,6 +182,21 @@ export default function DashboardPage() {
     () => filteredCampaignsData.reduce((s, c) => s + (Number(c.spend) || 0), 0),
     [filteredCampaignsData]
   );
+
+  // PERÍODO ANTERIOR (Campanhas): mesma duração imediatamente antes, com a MESMA
+  // barreira de isolamento (unit travado na raiz; admin respeita Loja/Franquia).
+  // null = sem período de comparação (ex.: "Todo o período").
+  const previousCampaignsData = useMemo(() => {
+    const pf = previousPeriodFilters(filters);
+    if (!pf) return null;
+    return scopedCampaigns.filter((c) => {
+      if (!passesDateFilter(c.date, pf)) return false;
+      if (!isUnit && pf.pipeline && pf.pipeline !== PIPELINE_ALL) {
+        if (!campaignMatchesPipeline(c.adsetName, pf.pipeline)) return false;
+      }
+      return true;
+    });
+  }, [scopedCampaigns, filters, isUnit]);
 
   // Agregações (derivadas do filteredData) — calculadas uma vez por filtro.
   const metrics = useMemo(() => computeMetrics(filteredData), [filteredData]);
@@ -640,6 +623,7 @@ export default function DashboardPage() {
                 <>
                   <Campanhas
                     campaigns={filteredCampaignsData}
+                    previousCampaigns={previousCampaignsData}
                     isUnit={isUnit}
                     unitPipeline={unitPipeline}
                   />

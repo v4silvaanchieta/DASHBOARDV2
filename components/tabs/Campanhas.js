@@ -4,22 +4,40 @@ import { useMemo } from "react";
 import KpiCard from "@/components/KpiCard";
 import { formatBRL } from "@/lib/metrics";
 import { computeCampaignTotals, groupCampaignsByName } from "@/lib/campaigns";
+import { makeDelta, prevHint } from "@/lib/format";
 
 /**
  * Aba "Campanhas" — Tráfego Pago (Meta Ads).
  * Exibe os dados da aba Campanhas já FILTRADOS por data/loja e ISOLADOS por
  * unidade (a barreira de cidade no Adset Name é aplicada antes, em page.js).
  *
+ * Cards macro comparam o Período Atual (`campaigns`) com o Período Anterior
+ * equivalente (`previousCampaigns`), no mesmo modelo da Visão Geral.
+ *
  * O filtro global (Período / Loja) fica no topo do app e alimenta `campaigns`.
  *
- * @param {{ campaigns: Array<Record<string, any>>, isUnit?: boolean, unitPipeline?: string }} props
+ * @param {{
+ *   campaigns: Array<Record<string, any>>,
+ *   previousCampaigns?: Array<Record<string, any>>|null,
+ *   isUnit?: boolean,
+ *   unitPipeline?: string,
+ * }} props
  */
-export default function Campanhas({ campaigns, isUnit = false, unitPipeline = "" }) {
+export default function Campanhas({
+  campaigns,
+  previousCampaigns = null,
+  isUnit = false,
+  unitPipeline = "",
+}) {
   const totals = useMemo(() => computeCampaignTotals(campaigns), [campaigns]);
+  const prevTotals = useMemo(
+    () => (previousCampaigns ? computeCampaignTotals(previousCampaigns) : null),
+    [previousCampaigns]
+  );
   const byCampaign = useMemo(() => groupCampaignsByName(campaigns), [campaigns]);
 
   const fmtInt = (v) => Number(v || 0).toLocaleString("pt-BR");
-  const fmtPct = (v) => `${(v || 0).toFixed(2).replace(".", ",")}%`;
+  const fmtCtr = (v) => `${(v || 0).toFixed(2).replace(".", ",")}%`;
 
   const numCell =
     "py-2.5 px-3 text-right tabular-nums text-slate-700 dark:text-slate-300";
@@ -37,46 +55,46 @@ export default function Campanhas({ campaigns, isUnit = false, unitPipeline = ""
         </p>
       </div>
 
-      {/* KPIs de mídia paga */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* KPIs macro — comparativo period-over-period (vs período anterior) */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          label="Investimento"
+          label="Investimento Total"
           value={formatBRL(totals.spend)}
           icon="💸"
           accent="emerald"
-          hint="Soma de Spend no período"
-        />
-        <KpiCard
-          label="Impressões"
-          value={fmtInt(totals.impressions)}
-          icon="👁️"
-          accent="indigo"
-          hint="Alcance bruto dos anúncios"
-        />
-        <KpiCard
-          label="Cliques"
-          value={fmtInt(totals.clicks)}
-          icon="🖱️"
-          hint={`CTR médio: ${fmtPct(totals.ctr)}`}
-        />
-        <KpiCard
-          label="CPC Médio"
-          value={formatBRL(totals.cpc)}
-          icon="🎯"
-          hint="Custo por clique"
-        />
-        <KpiCard
-          label="CPM Médio"
-          value={formatBRL(totals.cpm)}
-          icon="📊"
-          hint="Custo por mil impressões"
+          delta={makeDelta(totals.spend, prevTotals?.spend ?? null)}
+          hint={prevHint(prevTotals?.spend ?? null, formatBRL)}
         />
         <KpiCard
           label="Conversas Iniciadas"
           value={fmtInt(totals.conversations)}
           icon="💬"
+          accent="indigo"
+          delta={makeDelta(
+            totals.conversations,
+            prevTotals?.conversations ?? null
+          )}
+          hint={prevHint(prevTotals?.conversations ?? null, fmtInt)}
+        />
+        <KpiCard
+          label="Custo por Conversa"
+          value={formatBRL(totals.costPerConversation)}
+          icon="🎯"
           accent="amber"
-          hint={`Custo/conversa: ${formatBRL(totals.costPerConversation)}`}
+          // Custo: cair é BOM -> goodWhenDown inverte verde/vermelho.
+          delta={makeDelta(
+            totals.costPerConversation,
+            prevTotals?.costPerConversation ?? null,
+            true
+          )}
+          hint={prevHint(prevTotals?.costPerConversation ?? null, formatBRL)}
+        />
+        <KpiCard
+          label="CTR Médio"
+          value={fmtCtr(totals.ctr)}
+          icon="📊"
+          delta={makeDelta(totals.ctr, prevTotals?.ctr ?? null)}
+          hint={prevHint(prevTotals?.ctr ?? null, fmtCtr)}
         />
       </div>
 
@@ -114,7 +132,7 @@ export default function Campanhas({ campaigns, isUnit = false, unitPipeline = ""
                     </td>
                     <td className={numCell}>{fmtInt(c.impressions)}</td>
                     <td className={numCell}>{fmtInt(c.clicks)}</td>
-                    <td className={numCell}>{fmtPct(c.ctr)}</td>
+                    <td className={numCell}>{fmtCtr(c.ctr)}</td>
                     <td className={numCell}>{formatBRL(c.cpc)}</td>
                     <td className="py-2.5 pl-3 text-right tabular-nums font-semibold text-emerald-600 dark:text-emerald-400">
                       {fmtInt(c.conversations)}
