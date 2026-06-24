@@ -51,8 +51,8 @@ export default function MarketingSection({
               Performance por Campanha
             </h3>
             <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-              Somente leads rastreáveis (UTM de tráfego pago) · orgânicos
-              excluídos
+              Atribuição por origem: campanha específica, tráfego pago por
+              unidade (tag V4 / WhatsApp) ou orgânico
             </p>
           </div>
           {campaigns.length > 0 ? (
