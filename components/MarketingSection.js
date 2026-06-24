@@ -46,9 +46,15 @@ export default function MarketingSection({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Tabela de Performance por Campanha */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900 lg:col-span-2">
-          <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Performance por Campanha
-          </h3>
+          <div className="mb-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Performance por Campanha
+            </h3>
+            <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
+              Somente leads rastreáveis (UTM de tráfego pago) · orgânicos
+              excluídos
+            </p>
+          </div>
           {campaigns.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
