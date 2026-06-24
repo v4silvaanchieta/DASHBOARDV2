@@ -53,6 +53,7 @@ import {
   phoneKey,
 } from "@/lib/crossref";
 import { computeProductRevenue } from "@/lib/products";
+import { campaignMatchesPipeline } from "@/lib/campaigns";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 
@@ -90,7 +91,8 @@ function prevHint(previous, fmt) {
 }
 
 export default function DashboardPage() {
-  const { data, leadsSdr, loading, error, lastUpdated } = useDashboardData();
+  const { data, leadsSdr, campaignsData, loading, error, lastUpdated } =
+    useDashboardData();
 
   // RBAC / Data Siloing: perfil do usuário (admin vê tudo; unit vê só sua pipeline).
   const { userData, logout } = useAuth();
@@ -181,6 +183,36 @@ export default function DashboardPage() {
       return k && phones.has(k);
     });
   }, [leadsSdr, filters, isUnit, filteredData]);
+
+  // ISOLAMENTO NA RAIZ — CAMPANHAS (tráfego pago): BARREIRA DE SEGURANÇA.
+  // Para perfil "unit", retém SOMENTE campanhas cujo Adset Name casa com a
+  // cidade da pipeline da unidade (ex.: "Velot Ponta Grossa" -> "ponta grossa").
+  // Nenhuma campanha de outra unidade pode vazar. (Regra Absoluta de Segurança.)
+  const scopedCampaigns = useMemo(() => {
+    if (!isUnit) return campaignsData;
+    return campaignsData.filter((c) =>
+      campaignMatchesPipeline(c.adsetName, unitPipeline)
+    );
+  }, [campaignsData, isUnit, unitPipeline]);
+
+  // Campanhas filtradas por DATA (sempre) e por LOJA. Para "unit" o escopo já
+  // está travado na raiz; para "admin", respeita o filtro global Loja/Franquia
+  // (uma loja específica casa pela cidade no Adset; "Todas as Lojas" libera tudo).
+  const filteredCampaignsData = useMemo(() => {
+    return scopedCampaigns.filter((c) => {
+      if (!passesDateFilter(c.date, filters)) return false;
+      if (!isUnit && filters.pipeline && filters.pipeline !== PIPELINE_ALL) {
+        if (!campaignMatchesPipeline(c.adsetName, filters.pipeline)) return false;
+      }
+      return true;
+    });
+  }, [scopedCampaigns, filters, isUnit]);
+
+  // Investimento real em tráfego pago (soma de Spend) do escopo atual.
+  const campaignSpend = useMemo(
+    () => filteredCampaignsData.reduce((s, c) => s + (Number(c.spend) || 0), 0),
+    [filteredCampaignsData]
+  );
 
   // Agregações (derivadas do filteredData) — calculadas uma vez por filtro.
   const metrics = useMemo(() => computeMetrics(filteredData), [filteredData]);
@@ -609,6 +641,8 @@ export default function DashboardPage() {
                   aiEfficiency={aiEfficiency}
                   leadsCount={metrics.leadsGerados}
                   revenue={metrics.faturamento}
+                  spend={campaignSpend}
+                  paidCampaignsCount={filteredCampaignsData.length}
                 />
               )}
 

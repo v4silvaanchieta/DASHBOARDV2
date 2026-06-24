@@ -26,6 +26,7 @@ export function useDashboardData() {
   const [data, setData] = useState([]);
   const [leadsSdr, setLeadsSdr] = useState([]);
   const [movimentacao, setMovimentacao] = useState([]);
+  const [campaignsData, setCampaignsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -40,11 +41,12 @@ export function useDashboardData() {
       if (isFirstLoadRef.current) setLoading(true);
 
       fetchAllSources()
-        .then(({ deals, movimentacao: mov, leadsSdr: sdr }) => {
+        .then(({ deals, movimentacao: mov, leadsSdr: sdr, campanhas }) => {
           if (!isMountedRef.current) return;
           setData(deals);
           setMovimentacao(mov);
           setLeadsSdr(sdr);
+          setCampaignsData(campanhas);
           setError(null);
           setLastUpdated(new Date());
         })
@@ -69,7 +71,7 @@ export function useDashboardData() {
     };
   }, []);
 
-  return { data, leadsSdr, movimentacao, loading, error, lastUpdated };
+  return { data, leadsSdr, movimentacao, campaignsData, loading, error, lastUpdated };
 }
 
 export default useDashboardData;

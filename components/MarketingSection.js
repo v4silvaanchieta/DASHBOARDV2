@@ -1,19 +1,21 @@
 "use client";
 
-import { useState } from "react";
 import { formatBRL } from "@/lib/metrics";
 
 /**
  * Módulo "Performance de Marketing" (Etapa 5).
  * - Tabela de performance por campanha (CF_UTM_CAMPAIGN).
  * - Card de Eficiência da IA (SDR IA -> etapas avançadas).
- * - Placeholders de CPL e ROI com input de verba (mockado) para cálculo futuro.
+ * - CPL e ROI calculados sobre o INVESTIMENTO REAL em tráfego pago (aba
+ *   Campanhas), já isolado por unidade/cidade no nível dos dados.
  *
  * @param {{
  *   campaigns: Array<{ campaign: string, leads: number, vendas: number, taxa: number }>,
  *   aiEfficiency: { sdrTotal: number, advanced: number, efficiency: number },
  *   leadsCount: number,
  *   revenue: number,
+ *   spend?: number,
+ *   paidCampaignsCount?: number,
  * }} props
  */
 export default function MarketingSection({
@@ -21,12 +23,12 @@ export default function MarketingSection({
   aiEfficiency,
   leadsCount,
   revenue,
+  spend = 0,
+  paidCampaignsCount = 0,
 }) {
-  // Verba mockada para cálculo de CPL/ROI (será integrada futuramente).
-  const [verba, setVerba] = useState(5000);
-
-  const cpl = leadsCount > 0 ? verba / leadsCount : 0;
-  const roi = verba > 0 ? ((revenue - verba) / verba) * 100 : 0;
+  // Investimento real (Spend somado da aba Campanhas, já isolado por unidade).
+  const cpl = leadsCount > 0 ? spend / leadsCount : 0;
+  const roi = spend > 0 ? ((revenue - spend) / spend) * 100 : 0;
 
   const fmtPct = (v) => `${v.toFixed(1).replace(".", ",")}%`;
 
@@ -110,23 +112,18 @@ export default function MarketingSection({
             </p>
           </div>
 
-          {/* Placeholders CPL e ROI */}
+          {/* Investimento REAL em tráfego pago (aba Campanhas) + CPL/ROI */}
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Investimento (mock)
+              Investimento (Tráfego Pago)
             </h3>
-            <label className="mt-3 block">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                Verba investida (R$)
-              </span>
-              <input
-                type="number"
-                min={0}
-                value={verba}
-                onChange={(e) => setVerba(Number(e.target.value) || 0)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-velot focus:outline-none focus:ring-1 focus:ring-velot dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-              />
-            </label>
+            <p className="mt-3 text-3xl font-bold text-slate-900 dark:text-slate-50">
+              {formatBRL(spend)}
+            </p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              {paidCampaignsCount.toLocaleString("pt-BR")} anúncios no período ·
+              soma de Spend (isolado por unidade)
+            </p>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
@@ -137,7 +134,7 @@ export default function MarketingSection({
                   {formatBRL(cpl)}
                 </p>
                 <p className="text-[10px] text-slate-400 dark:text-slate-500">
-                  Verba / {leadsCount} leads
+                  Investimento / {leadsCount} leads
                 </p>
               </div>
               <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
@@ -152,7 +149,7 @@ export default function MarketingSection({
                   {fmtPct(roi)}
                 </p>
                 <p className="text-[10px] text-slate-400 dark:text-slate-500">
-                  (Receita − Verba) / Verba
+                  (Receita − Investimento) / Investimento
                 </p>
               </div>
             </div>
