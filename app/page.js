@@ -50,8 +50,8 @@ import {
   phoneKey,
 } from "@/lib/crossref";
 import { computeProductRevenue } from "@/lib/products";
-import { campaignMatchesPipeline } from "@/lib/campaigns";
-import { makeDelta } from "@/lib/format";
+import { campaignMatchesPipeline, computeCampaignTotals } from "@/lib/campaigns";
+import { makeDelta, fmtCount, prevHint } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 
@@ -206,26 +206,27 @@ export default function DashboardPage() {
     return computeMetrics(applyFilters(scopedData, eff));
   }, [scopedData, filters, isUnit, unitPipeline]);
 
-  const compareSdrCount = useMemo(() => {
-    const pf = previousPeriodFilters(filters);
-    if (!pf) return null;
-    const byDate = leadsSdr.filter((l) => passesDateFilter(l.data, pf));
-    if (!isUnit) return byDate.length;
-    // Para unidade, cruza com os deals da própria pipeline no período anterior.
-    const eff = { ...pf, pipeline: unitPipeline };
-    const prevDeals = applyFilters(scopedData, eff);
-    const phones = new Set();
-    for (const d of prevDeals) {
-      for (const p of [d.telefone, d.cfTelefone]) {
-        const k = phoneKey(p);
-        if (k) phones.add(k);
-      }
-    }
-    return byDate.filter((l) => {
-      const k = phoneKey(l.telefone);
-      return k && phones.has(k);
-    }).length;
-  }, [scopedData, leadsSdr, filters, isUnit, unitPipeline]);
+  // KPIs de tráfego pago (Marketing) — totais do período atual e anterior para
+  // os cards macro do topo (conversas, CPA, CTR, investimento).
+  const campaignTotals = useMemo(
+    () => computeCampaignTotals(filteredCampaignsData),
+    [filteredCampaignsData]
+  );
+  const prevCampaignTotals = useMemo(
+    () =>
+      previousCampaignsData ? computeCampaignTotals(previousCampaignsData) : null,
+    [previousCampaignsData]
+  );
+
+  // ROAS = Ganhos (Faturamento Realizado do CRM) / Investimento (Spend). Período
+  // anterior idem, quando há comparação e investimento > 0.
+  const roas =
+    campaignTotals.spend > 0 ? metrics.faturamento / campaignTotals.spend : 0;
+  const prevRoas =
+    compareMetrics && prevCampaignTotals && prevCampaignTotals.spend > 0
+      ? compareMetrics.faturamento / prevCampaignTotals.spend
+      : null;
+
   const hygieneRows = useMemo(
     () => computeStoreHygiene(filteredData, settings.penalties),
     [filteredData, settings.penalties]
@@ -479,68 +480,72 @@ export default function DashboardPage() {
               {/* === VISÃO GERAL === */}
               {activeTab === "visao-geral" && (
                 <>
-                  {/* LINHA 1 — 6 KPIs (3 esquerda + 3 direita), limpos: número
-                      grande + badge de variação, sem textos auxiliares cinzas. */}
+                  {/* LINHA 1 — 6 KPIs macro: 3 de Marketing (esquerda) + 3 de
+                      Finanças (direita). Só título + número + badge de variação,
+                      com o comparativo "vs X no período anterior". */}
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                    {/* — Bloco Esquerdo: Tráfego / Marketing — */}
                     <KpiCard
-                      label="Entrada SDR IA"
-                      value={(isUnit
-                        ? metrics.leadsUnicos
-                        : filteredLeadsSdr.length
-                      ).toLocaleString("pt-BR")}
-                      icon="🤖"
+                      label="Conversas Iniciadas"
+                      value={fmtCount(campaignTotals.conversations)}
+                      icon="💬"
                       accent="indigo"
-                      delta={
-                        isUnit
-                          ? makeDelta(metrics.leadsUnicos, compareMetrics?.leadsUnicos)
-                          : makeDelta(filteredLeadsSdr.length, compareSdrCount)
-                      }
+                      delta={makeDelta(
+                        campaignTotals.conversations,
+                        prevCampaignTotals?.conversations ?? null
+                      )}
+                      hint={prevHint(prevCampaignTotals?.conversations ?? null, fmtCount)}
                     />
                     <KpiCard
-                      label="Leads Recebidos"
-                      value={metrics.leadsUnicos.toLocaleString("pt-BR")}
-                      icon="👥"
-                      delta={makeDelta(metrics.leadsUnicos, compareMetrics?.leadsUnicos)}
+                      label="Custo por Conversa"
+                      value={formatBRL(campaignTotals.costPerConversation)}
+                      icon="🎯"
+                      accent="amber"
+                      delta={makeDelta(
+                        campaignTotals.costPerConversation,
+                        prevCampaignTotals?.costPerConversation ?? null,
+                        true
+                      )}
+                      hint={prevHint(
+                        prevCampaignTotals?.costPerConversation ?? null,
+                        formatBRL
+                      )}
                     />
                     <KpiCard
-                      label="Faturamento Realizado"
+                      label="CTR Médio"
+                      value={`${campaignTotals.ctr.toFixed(2).replace(".", ",")}%`}
+                      icon="📊"
+                      delta={makeDelta(campaignTotals.ctr, prevCampaignTotals?.ctr ?? null)}
+                      hint={prevHint(
+                        prevCampaignTotals?.ctr ?? null,
+                        (v) => `${v.toFixed(2).replace(".", ",")}%`
+                      )}
+                    />
+
+                    {/* — Bloco Direito: Finanças — */}
+                    <KpiCard
+                      label="Investimento"
+                      value={formatBRL(campaignTotals.spend)}
+                      icon="💸"
+                      accent="amber"
+                      delta={makeDelta(campaignTotals.spend, prevCampaignTotals?.spend ?? null)}
+                      hint={prevHint(prevCampaignTotals?.spend ?? null, formatBRL)}
+                    />
+                    <KpiCard
+                      label="Ganhos"
                       value={formatBRL(metrics.faturamento)}
                       icon="💰"
                       accent="emerald"
                       delta={makeDelta(metrics.faturamento, compareMetrics?.faturamento)}
+                      hint={prevHint(compareMetrics?.faturamento ?? null, formatBRL)}
                     />
                     <KpiCard
-                      label="Faturamento Perdido"
-                      value={formatBRL(metrics.faturamentoPerdido)}
-                      icon="💸"
-                      accent="red"
-                      delta={makeDelta(
-                        metrics.faturamentoPerdido,
-                        compareMetrics?.faturamentoPerdido,
-                        true
-                      )}
-                    />
-                    <KpiCard
-                      label="Leads Estagnados"
-                      value={metrics.leadsParados.toLocaleString("pt-BR")}
-                      icon="⏳"
-                      accent="amber"
-                      delta={makeDelta(
-                        metrics.leadsParados,
-                        compareMetrics?.leadsParados,
-                        true
-                      )}
-                    />
-                    <KpiCard
-                      label="Taxa de Conversão"
-                      value={`${metrics.taxaConversao
-                        .toFixed(1)
-                        .replace(".", ",")}%`}
+                      label="ROAS"
+                      value={`${roas.toFixed(2).replace(".", ",")}x`}
                       icon="📈"
-                      delta={makeDelta(
-                        metrics.taxaConversao,
-                        compareMetrics?.taxaConversao
-                      )}
+                      accent="emerald"
+                      delta={makeDelta(roas, prevRoas)}
+                      hint={prevHint(prevRoas, (v) => `${v.toFixed(2).replace(".", ",")}x`)}
                     />
                   </div>
 
