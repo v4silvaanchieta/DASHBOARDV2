@@ -573,22 +573,25 @@ export default function DashboardPage() {
                           {
                             label: "Conversas Iniciadas",
                             value: campaignTotals.conversations,
-                            barClass: "bg-indigo-600",
+                            color: "#c4b5fd",
+                            captureLabel: "Captura",
                           },
                           {
-                            label: "Chegou na IA",
+                            label: "Chegou na Inteligência Artificial",
                             value: filteredLeadsSdr.length,
-                            barClass: "bg-indigo-500",
+                            color: "#93c5fd",
+                            captureLabel: "Qualif",
                           },
                           {
                             label: "Qualificados p/ CRM",
                             value: metrics.leadsUnicos,
-                            barClass: "bg-indigo-400",
+                            color: "#5eead4",
+                            captureLabel: "Fecham",
                           },
                           {
                             label: "Ganhos",
                             value: metrics.vendasRealizadas,
-                            barClass: "bg-emerald-500",
+                            color: "#6ee7b7",
                           },
                         ]}
                       />

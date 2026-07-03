@@ -1,20 +1,24 @@
 "use client";
 
+/** Estreitamento (%) por etapa — dá o formato de funil (trapézios encaixados). */
+const STEP = 9;
+
 /**
- * Funil comercial vertical (4 etapas decrescentes). Cada barra é centralizada e
- * proporcional ao MAIOR valor entre as etapas; entre as barras, a tag
- * "Captura: X%" mostra a taxa de passagem para a etapa imediatamente abaixo.
+ * Funil comercial vertical — trapézios encaixados (clip-path) num gradiente
+ * roxo → azul → teal → verde, com números absolutos por etapa e um selo de
+ * conversão entre elas (rótulo próprio por transição: Captura/Qualif/Fecham).
  *
- * Números absolutos por etapa — para unidade, as etapas do meio podem ficar
- * iguais/parecidas (o SDR da unidade já é o CRM dela), o que é esperado.
+ * O taper é decorativo (uniforme); os NÚMEROS carregam o dado real. Para
+ * unidade, as etapas do meio podem ficar iguais/parecidas — o esperado.
  *
  * @param {{
- *   stages: Array<{ label: string, value: number, barClass?: string }>,
+ *   stages: Array<{
+ *     label: string, value: number, color: string, captureLabel?: string,
+ *   }>,
  * }} props
  */
 export default function ConversionFunnel({ stages }) {
   const fmt = (n) => Number(n || 0).toLocaleString("pt-BR");
-  const max = Math.max(...stages.map((s) => s.value), 1);
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
@@ -22,10 +26,13 @@ export default function ConversionFunnel({ stages }) {
         Funil Comercial
       </h3>
 
-      <div className="space-y-1">
+      <div>
         {stages.map((s, i) => {
-          // Largura proporcional ao maior valor, com piso p/ legibilidade.
-          const width = Math.max((s.value / max) * 100, 30);
+          const topInset = i * STEP;
+          const bottomInset = (i + 1) * STEP;
+          const clip = `polygon(${topInset}% 0, ${100 - topInset}% 0, ${
+            100 - bottomInset
+          }% 100%, ${bottomInset}% 100%)`;
           const next = stages[i + 1];
           const capture =
             next && s.value > 0 ? (next.value / s.value) * 100 : null;
@@ -33,22 +40,25 @@ export default function ConversionFunnel({ stages }) {
           return (
             <div key={s.label}>
               <div
-                className={`mx-auto flex min-h-[58px] flex-col items-center justify-center rounded-lg px-3 py-2 text-center text-white shadow-sm ${
-                  s.barClass ?? "bg-indigo-500"
-                }`}
-                style={{ width: `${width}%` }}
+                className="flex min-h-[72px] items-center justify-center px-8 text-center"
+                style={{ clipPath: clip, background: s.color }}
               >
-                <span className="text-[11px] font-medium uppercase leading-tight tracking-wide text-white/90">
-                  {s.label}
-                </span>
-                <span className="text-lg font-bold leading-tight">
-                  {fmt(s.value)}
-                </span>
+                <div className="leading-tight">
+                  <p className="text-xl font-extrabold text-slate-800">
+                    {fmt(s.value)}
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-600">
+                    {s.label}
+                  </p>
+                </div>
               </div>
 
               {capture != null && (
-                <div className="py-1 text-center text-[11px] font-medium text-slate-400 dark:text-slate-500">
-                  ↓ Captura: {capture.toFixed(1).replace(".", ",")}%
+                <div className="relative z-10 -my-2.5 flex justify-center">
+                  <span className="rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    {s.captureLabel ?? "Captura"}:{" "}
+                    {capture.toFixed(1).replace(".", ",")}%
+                  </span>
                 </div>
               )}
             </div>
