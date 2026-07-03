@@ -5,9 +5,10 @@ import Sidebar, { MENU_ITEMS } from "@/components/Sidebar";
 import Header from "@/components/Header";
 import FilterBar from "@/components/FilterBar";
 import KpiCard from "@/components/KpiCard";
-import AreaPlaceholder from "@/components/AreaPlaceholder";
 import ConversionFunnel from "@/components/ConversionFunnel";
 import LossReasons from "@/components/LossReasons";
+import CampaignBreakdown from "@/components/CampaignBreakdown";
+import CrmMatrix from "@/components/CrmMatrix";
 import StoreHygieneTable from "@/components/StoreHygieneTable";
 import ScoreGauge from "@/components/ScoreGauge";
 import MarketingSection from "@/components/MarketingSection";
@@ -561,16 +562,8 @@ export default function DashboardPage() {
                   <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
                     {/* Coluna Esquerda — Racional (60% = 3/5) */}
                     <div className="space-y-6 lg:col-span-3">
-                      <AreaPlaceholder
-                        icon="📣"
-                        title="Tabela de Campanhas"
-                        subtitle="Coluna Racional · tráfego pago"
-                      />
-                      <AreaPlaceholder
-                        icon="🗂️"
-                        title="Matriz do CRM"
-                        subtitle="Coluna Racional · unidades / higiene"
-                      />
+                      <CampaignBreakdown campaigns={filteredCampaignsData} />
+                      <CrmMatrix rows={storeReport} title="Visualização do CRM" />
                     </div>
 
                     {/* Coluna Direita — Emocional (40% = 2/5) */}
