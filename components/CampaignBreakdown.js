@@ -33,7 +33,8 @@ export default function CampaignBreakdown({ campaigns }) {
   const byAdset = useMemo(() => groupCampaignsByAdset(campaigns), [campaigns]);
   const byAd = useMemo(() => groupCampaignsByAd(campaigns), [campaigns]);
 
-  const [detailView, setDetailView] = useState("conjuntos");
+  // Padrão: visão "Criativo" (anúncios mais fortes por conversas iniciadas).
+  const [detailView, setDetailView] = useState("criativos");
 
   const adsetColumns = [
     { key: "adset", label: "Conjunto", align: "left", strong: true, render: (r) => r.adset },
