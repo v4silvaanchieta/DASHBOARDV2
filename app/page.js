@@ -6,6 +6,8 @@ import Header from "@/components/Header";
 import FilterBar from "@/components/FilterBar";
 import KpiCard from "@/components/KpiCard";
 import AreaPlaceholder from "@/components/AreaPlaceholder";
+import ConversionFunnel from "@/components/ConversionFunnel";
+import LossReasons from "@/components/LossReasons";
 import StoreHygieneTable from "@/components/StoreHygieneTable";
 import ScoreGauge from "@/components/ScoreGauge";
 import MarketingSection from "@/components/MarketingSection";
@@ -35,6 +37,7 @@ import {
   formatBRL,
   SLA_TARGET_MINUTES,
 } from "@/lib/metrics";
+import { computeLossAnalysis } from "@/lib/charts";
 import {
   computeStoreHygiene,
   computeStoreReport,
@@ -196,6 +199,10 @@ export default function DashboardPage() {
 
   // Agregações (derivadas do filteredData) — calculadas uma vez por filtro.
   const metrics = useMemo(() => computeMetrics(filteredData), [filteredData]);
+  const lossAnalysis = useMemo(
+    () => computeLossAnalysis(filteredData),
+    [filteredData]
+  );
 
   // PERÍODO ANTERIOR (Period-over-Period): mesma duração imediatamente antes do
   // período atual, respeitando o isolamento de loja/unidade. null = sem comparação.
@@ -568,16 +575,31 @@ export default function DashboardPage() {
 
                     {/* Coluna Direita — Emocional (40% = 2/5) */}
                     <div className="space-y-6 lg:col-span-2">
-                      <AreaPlaceholder
-                        icon="🔻"
-                        title="Funil Visual"
-                        subtitle="Coluna Emocional"
+                      <ConversionFunnel
+                        stages={[
+                          {
+                            label: "Conversas Iniciadas",
+                            value: campaignTotals.conversations,
+                            barClass: "bg-indigo-600",
+                          },
+                          {
+                            label: "Chegou na IA",
+                            value: filteredLeadsSdr.length,
+                            barClass: "bg-indigo-500",
+                          },
+                          {
+                            label: "Qualificados p/ CRM",
+                            value: metrics.leadsUnicos,
+                            barClass: "bg-indigo-400",
+                          },
+                          {
+                            label: "Ganhos",
+                            value: metrics.vendasRealizadas,
+                            barClass: "bg-emerald-500",
+                          },
+                        ]}
                       />
-                      <AreaPlaceholder
-                        icon="📉"
-                        title="Motivos de Perda"
-                        subtitle="Coluna Emocional"
-                      />
+                      <LossReasons analysis={lossAnalysis} />
                     </div>
                   </div>
                 </>
