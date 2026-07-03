@@ -7,8 +7,11 @@
  * @param {{ activeTab: string, onSelect: (id: string) => void }} props
  */
 
+// `unitVisible` marca os itens que o perfil de Unidade (role === "unit") enxerga.
+// No modelo one-page, a unidade vê APENAS o Painel V4 (tudo consolidado nele);
+// o Admin continua vendo todas as abas gerenciais.
 export const MENU_ITEMS = [
-  { id: "visao-geral", label: "Visão Geral", icon: "📊" },
+  { id: "visao-geral", label: "Painel V4", icon: "📊", unitVisible: true },
   { id: "negocios", label: "Negócios", icon: "💼" },
   { id: "pipeline", label: "Unidades", icon: "🔀" },
   { id: "produtos", label: "Produtos", icon: "📦" },
@@ -25,7 +28,8 @@ const LOGO_ON_DARK =
   "https://github.com/v4silvaanchieta/DASHBOARDV2/blob/main/velot-cor-1.png?raw=true";
 
 export default function Sidebar({ activeTab, onSelect, theme = "light", isAdmin = false }) {
-  const items = MENU_ITEMS.filter((item) => !item.adminOnly || isAdmin);
+  // Admin vê todas as abas; Unidade vê somente as marcadas com `unitVisible`.
+  const items = MENU_ITEMS.filter((item) => (isAdmin ? true : item.unitVisible === true));
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-slate-950 text-slate-300 md:border-r md:border-slate-800/80">
       {/* Logo / Marca (sidebar sempre escura -> logo claro nos dois temas) */}

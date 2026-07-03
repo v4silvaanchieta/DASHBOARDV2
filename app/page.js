@@ -5,9 +5,7 @@ import Sidebar, { MENU_ITEMS } from "@/components/Sidebar";
 import Header from "@/components/Header";
 import FilterBar from "@/components/FilterBar";
 import KpiCard from "@/components/KpiCard";
-import SlaCard from "@/components/SlaCard";
-import SalesFunnelChart from "@/components/SalesFunnelChart";
-import LossPieChart from "@/components/LossPieChart";
+import AreaPlaceholder from "@/components/AreaPlaceholder";
 import StoreHygieneTable from "@/components/StoreHygieneTable";
 import ScoreGauge from "@/components/ScoreGauge";
 import MarketingSection from "@/components/MarketingSection";
@@ -32,13 +30,11 @@ import {
 } from "@/lib/filters";
 import {
   computeMetrics,
-  computeSLA,
   countUniqueLeads,
   isQualifiedLead,
   formatBRL,
   SLA_TARGET_MINUTES,
 } from "@/lib/metrics";
-import { computeFunnel, computeLossAnalysis } from "@/lib/charts";
 import {
   computeStoreHygiene,
   computeStoreReport,
@@ -55,7 +51,7 @@ import {
 } from "@/lib/crossref";
 import { computeProductRevenue } from "@/lib/products";
 import { campaignMatchesPipeline } from "@/lib/campaigns";
-import { makeDelta, fmtCount, fmtPct, prevHint } from "@/lib/format";
+import { makeDelta } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 
@@ -200,10 +196,6 @@ export default function DashboardPage() {
 
   // Agregações (derivadas do filteredData) — calculadas uma vez por filtro.
   const metrics = useMemo(() => computeMetrics(filteredData), [filteredData]);
-  const sla = useMemo(
-    () => computeSLA(filteredData, settings.slaTargetMinutes),
-    [filteredData, settings.slaTargetMinutes]
-  );
 
   // PERÍODO ANTERIOR (Period-over-Period): mesma duração imediatamente antes do
   // período atual, respeitando o isolamento de loja/unidade. null = sem comparação.
@@ -234,11 +226,6 @@ export default function DashboardPage() {
       return k && phones.has(k);
     }).length;
   }, [scopedData, leadsSdr, filters, isUnit, unitPipeline]);
-  const funnelData = useMemo(() => computeFunnel(filteredData), [filteredData]);
-  const lossAnalysis = useMemo(
-    () => computeLossAnalysis(filteredData),
-    [filteredData]
-  );
   const hygieneRows = useMemo(
     () => computeStoreHygiene(filteredData, settings.penalties),
     [filteredData, settings.penalties]
@@ -492,7 +479,9 @@ export default function DashboardPage() {
               {/* === VISÃO GERAL === */}
               {activeTab === "visao-geral" && (
                 <>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {/* LINHA 1 — 6 KPIs (3 esquerda + 3 direita), limpos: número
+                      grande + badge de variação, sem textos auxiliares cinzas. */}
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                     <KpiCard
                       label="Entrada SDR IA"
                       value={(isUnit
@@ -506,38 +495,12 @@ export default function DashboardPage() {
                           ? makeDelta(metrics.leadsUnicos, compareMetrics?.leadsUnicos)
                           : makeDelta(filteredLeadsSdr.length, compareSdrCount)
                       }
-                      hint={
-                        isUnit
-                          ? "Leads da unidade no CRM (roteados por cidade)"
-                          : prevHint(compareSdrCount, fmtCount)
-                      }
                     />
                     <KpiCard
                       label="Leads Recebidos"
                       value={metrics.leadsUnicos.toLocaleString("pt-BR")}
                       icon="👥"
                       delta={makeDelta(metrics.leadsUnicos, compareMetrics?.leadsUnicos)}
-                      hint={
-                        metrics.leadsGerados > metrics.leadsUnicos
-                          ? `Únicos (${(
-                              metrics.leadsGerados - metrics.leadsUnicos
-                            ).toLocaleString("pt-BR")} duplicados removidos)`
-                          : prevHint(compareMetrics?.leadsUnicos, fmtCount)
-                      }
-                      extra={
-                        isUnit
-                          ? null
-                          : `Conversão SDR IA → CRM: ${
-                              filteredLeadsSdr.length > 0
-                                ? `${(
-                                    (generation.matched / filteredLeadsSdr.length) *
-                                    100
-                                  )
-                                    .toFixed(1)
-                                    .replace(".", ",")}%`
-                                : "—"
-                            }`
-                      }
                     />
                     <KpiCard
                       label="Faturamento Realizado"
@@ -545,7 +508,6 @@ export default function DashboardPage() {
                       icon="💰"
                       accent="emerald"
                       delta={makeDelta(metrics.faturamento, compareMetrics?.faturamento)}
-                      hint={prevHint(compareMetrics?.faturamento, formatBRL)}
                     />
                     <KpiCard
                       label="Faturamento Perdido"
@@ -557,7 +519,6 @@ export default function DashboardPage() {
                         compareMetrics?.faturamentoPerdido,
                         true
                       )}
-                      hint={prevHint(compareMetrics?.faturamentoPerdido, formatBRL)}
                     />
                     <KpiCard
                       label="Leads Estagnados"
@@ -569,7 +530,6 @@ export default function DashboardPage() {
                         compareMetrics?.leadsParados,
                         true
                       )}
-                      hint={prevHint(compareMetrics?.leadsParados, fmtCount)}
                     />
                     <KpiCard
                       label="Taxa de Conversão"
@@ -581,15 +541,39 @@ export default function DashboardPage() {
                         metrics.taxaConversao,
                         compareMetrics?.taxaConversao
                       )}
-                      hint={prevHint(compareMetrics?.taxaConversao, fmtPct)}
                     />
                   </div>
 
-                  <SlaCard sla={sla} />
+                  {/* BLOCO PRINCIPAL — 60% (Racional) / 40% (Emocional).
+                      Casca com áreas demarcadas (populadas na próxima fase). */}
+                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+                    {/* Coluna Esquerda — Racional (60% = 3/5) */}
+                    <div className="space-y-6 lg:col-span-3">
+                      <AreaPlaceholder
+                        icon="📣"
+                        title="Tabela de Campanhas"
+                        subtitle="Coluna Racional · tráfego pago"
+                      />
+                      <AreaPlaceholder
+                        icon="🗂️"
+                        title="Matriz do CRM"
+                        subtitle="Coluna Racional · unidades / higiene"
+                      />
+                    </div>
 
-                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    <SalesFunnelChart data={funnelData} isDark={isDark} />
-                    <LossPieChart analysis={lossAnalysis} isDark={isDark} />
+                    {/* Coluna Direita — Emocional (40% = 2/5) */}
+                    <div className="space-y-6 lg:col-span-2">
+                      <AreaPlaceholder
+                        icon="🔻"
+                        title="Funil Visual"
+                        subtitle="Coluna Emocional"
+                      />
+                      <AreaPlaceholder
+                        icon="📉"
+                        title="Motivos de Perda"
+                        subtitle="Coluna Emocional"
+                      />
+                    </div>
                   </div>
                 </>
               )}
