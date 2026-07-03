@@ -91,13 +91,13 @@ export default function KpiCard({
           )}
         </div>
       </div>
-      <div className="mt-3 flex items-center gap-2">
-        <p className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
+      <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <p className="text-2xl font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-50">
           {value}
         </p>
         {delta && (
           <span
-            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+            className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${
               deltaTones[delta.tone] ?? deltaTones.neutral
             }`}
             title="Variação vs período de comparação"
