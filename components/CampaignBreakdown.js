@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ArrowUpRight } from "lucide-react";
 import CampaignTable from "@/components/CampaignTable";
 import { formatBRL } from "@/lib/metrics";
 import {
@@ -26,9 +27,9 @@ const fmtCtr = (v) => `${(v || 0).toFixed(2).replace(".", ",")}%`;
  *
  * Reutilizável na aba Campanhas e na coluna esquerda do Painel V4.
  *
- * @param {{ campaigns: Array<Record<string, any>> }} props
+ * @param {{ campaigns: Array<Record<string, any>>, onNavigate?: () => void }} props
  */
-export default function CampaignBreakdown({ campaigns }) {
+export default function CampaignBreakdown({ campaigns, onNavigate = null }) {
   const byCampaign = useMemo(() => groupCampaignsByName(campaigns), [campaigns]);
   const byAdset = useMemo(() => groupCampaignsByAdset(campaigns), [campaigns]);
   const byAd = useMemo(() => groupCampaignsByAd(campaigns), [campaigns]);
@@ -63,9 +64,22 @@ export default function CampaignBreakdown({ campaigns }) {
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Detalhamento de Campanhas
-          </h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Detalhamento de Campanhas
+            </h3>
+            {onNavigate && (
+              <button
+                type="button"
+                onClick={onNavigate}
+                aria-label="Abrir aba Campanhas"
+                title="Ver aba Campanhas"
+                className="text-slate-300 transition-colors hover:text-velot dark:text-slate-600"
+              >
+                <ArrowUpRight size={16} />
+              </button>
+            )}
+          </div>
           <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
             {detailView === "conjuntos" &&
               "Conjuntos de anúncio (cidades / segmentações) por investimento"}

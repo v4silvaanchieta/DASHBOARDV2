@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Sidebar, { MENU_ITEMS } from "@/components/Sidebar";
+import { ArrowLeft } from "lucide-react";
 import Header from "@/components/Header";
 import FilterBar from "@/components/FilterBar";
 import KpiCard from "@/components/KpiCard";
@@ -18,9 +18,7 @@ import NegociosTab from "@/components/tabs/NegociosTab";
 import Campanhas from "@/components/tabs/Campanhas";
 import ProdutosTab from "@/components/tabs/ProdutosTab";
 import RelatoriosTab from "@/components/tabs/RelatoriosTab";
-import ConfiguracoesTab from "@/components/tabs/ConfiguracoesTab";
-import GerenciarAcessos from "@/components/tabs/GerenciarAcessos";
-import PerfilTab from "@/components/tabs/PerfilTab";
+import AdminSettings from "@/components/tabs/AdminSettings";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import {
   applyFilters,
@@ -58,6 +56,16 @@ import { campaignMatchesPipeline, computeCampaignTotals } from "@/lib/campaigns"
 import { makeDelta, fmtCount, prevHint } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+
+/** Rótulos das telas (título do Header) — navegação é contextual, sem menu. */
+const TAB_LABELS = {
+  "visao-geral": "Painel V4",
+  negocios: "Negócios",
+  produtos: "Produtos",
+  campanhas: "Campanhas",
+  relatorios: "Relatórios",
+  config: "Configurações",
+};
 
 export default function DashboardPage() {
   const { data, leadsSdr, campaignsData, loading, error, lastUpdated } =
@@ -383,8 +391,8 @@ export default function DashboardPage() {
     [operationalSlides]
   );
 
-  const activeLabel =
-    MENU_ITEMS.find((m) => m.id === activeTab)?.label ?? "Dashboard";
+  const activeLabel = TAB_LABELS[activeTab] ?? "Painel V4";
+  const goHome = () => setActiveTab("visao-geral");
 
   // Sem documento de permissão = SEM ACESSO (mesmo autenticado).
   // Fecha o vazamento de dados para usuários revogados/não configurados.
@@ -414,34 +422,43 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Sidebar
-        activeTab={activeTab}
-        onSelect={setActiveTab}
-        theme={theme}
-        isAdmin={isAdmin}
-      />
-
-      <div className="min-h-screen md:pl-64">
+      <div className="min-h-screen">
         <Header
           title={activeLabel}
           lastUpdated={lastUpdated}
           theme={theme}
           onToggleTheme={toggleTheme}
+          isAdmin={isAdmin}
+          onOpenSettings={() => setActiveTab("config")}
         />
 
         <main className="space-y-6 p-6">
-          {activeTab === "gerenciar-acessos" ? (
+          {activeTab === "config" ? (
             isAdmin ? (
-              <GerenciarAcessos pipelines={pipelineOptions} />
+              <AdminSettings
+                settings={settings}
+                onChange={setSettings}
+                pipelines={pipelineOptions}
+                onBack={goHome}
+              />
             ) : (
               <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                 Acesso restrito a administradores.
               </div>
             )
-          ) : activeTab === "perfil" ? (
-            <PerfilTab />
           ) : (
             <>
+          {/* Botão de voltar — presente em todas as telas exceto o Painel */}
+          {activeTab !== "visao-geral" && (
+            <button
+              type="button"
+              onClick={goHome}
+              className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-velot hover:text-velot dark:border-slate-700 dark:text-slate-300"
+            >
+              <ArrowLeft size={16} /> Voltar ao Painel
+            </button>
+          )}
+
           {/* Filtros globais — sempre no topo, afetam todas as abas */}
           <FilterBar
             filters={filters}
@@ -503,6 +520,7 @@ export default function DashboardPage() {
                         prevCampaignTotals?.conversations ?? null
                       )}
                       hint={prevHint(prevCampaignTotals?.conversations ?? null, fmtCount)}
+                      onNavigate={isAdmin ? () => setActiveTab("negocios") : undefined}
                     />
                     <KpiCard
                       label="Custo por Conversa"
@@ -546,6 +564,7 @@ export default function DashboardPage() {
                       accent="emerald"
                       delta={makeDelta(metrics.faturamento, compareMetrics?.faturamento)}
                       hint={prevHint(compareMetrics?.faturamento ?? null, formatBRL)}
+                      onNavigate={isAdmin ? () => setActiveTab("produtos") : undefined}
                     />
                     <KpiCard
                       label="ROAS"
@@ -562,8 +581,15 @@ export default function DashboardPage() {
                   <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
                     {/* Coluna Esquerda — Racional (60% = 3/5) */}
                     <div className="space-y-6 lg:col-span-3">
-                      <CampaignBreakdown campaigns={filteredCampaignsData} />
-                      <CrmMatrix rows={storeReport} title="Visualização do CRM" />
+                      <CampaignBreakdown
+                        campaigns={filteredCampaignsData}
+                        onNavigate={isAdmin ? () => setActiveTab("campanhas") : undefined}
+                      />
+                      <CrmMatrix
+                        rows={storeReport}
+                        title="Visualização do CRM"
+                        onNavigate={isAdmin ? () => setActiveTab("relatorios") : undefined}
+                      />
                     </div>
 
                     {/* Coluna Direita — Emocional (40% = 2/5) */}
@@ -604,22 +630,6 @@ export default function DashboardPage() {
               {/* === NEGÓCIOS === */}
               {activeTab === "negocios" && <NegociosTab data={negociosList} />}
 
-              {/* === UNIDADES (Auditoria das Franquias) === */}
-              {activeTab === "pipeline" && (
-                <>
-                  <ScoreGauge
-                    score={overallScore}
-                    scopeName={scoreScopeName}
-                    leadsTotal={activeLeads}
-                  />
-                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    <StagnantAlert slides={activeSlides} />
-                    <SourceCrossSection generation={generation} />
-                  </div>
-                  <StoreHygieneTable rows={hygieneRows} />
-                </>
-              )}
-
               {/* === PRODUTOS === */}
               {activeTab === "produtos" && (
                 <ProdutosTab products={products} isDark={isDark} />
@@ -645,18 +655,25 @@ export default function DashboardPage() {
                 </>
               )}
 
-              {/* === RELATÓRIOS === */}
+              {/* === RELATÓRIOS — relatório + score de higiene + avisos (antiga aba Unidades) === */}
               {activeTab === "relatorios" && (
-                <RelatoriosTab
-                  recebidosCount={relatoriosResumo.recebidos}
-                  qualificadosCount={relatoriosResumo.qualificados}
-                  rows={storeReport}
-                />
-              )}
-
-              {/* === CONFIGURAÇÕES === */}
-              {activeTab === "configuracoes" && (
-                <ConfiguracoesTab settings={settings} onChange={setSettings} />
+                <>
+                  <ScoreGauge
+                    score={overallScore}
+                    scopeName={scoreScopeName}
+                    leadsTotal={activeLeads}
+                  />
+                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <StagnantAlert slides={activeSlides} />
+                    <SourceCrossSection generation={generation} />
+                  </div>
+                  <RelatoriosTab
+                    recebidosCount={relatoriosResumo.recebidos}
+                    qualificadosCount={relatoriosResumo.qualificados}
+                    rows={storeReport}
+                  />
+                  <StoreHygieneTable rows={hygieneRows} />
+                </>
               )}
             </>
           )}

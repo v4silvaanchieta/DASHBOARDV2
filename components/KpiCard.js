@@ -1,9 +1,12 @@
 "use client";
 
+import { ArrowUpRight } from "lucide-react";
+
 /**
  * Card de KPI premium (Etapa 6).
  * Sempre fundo branco, borda suave e sombra leve — sem cores pastel de fundo.
- * O `accent` colore apenas o chip do ícone.
+ * O `accent` colore apenas o chip do ícone. Se `onNavigate` for passado, o card
+ * vira clicável (mostra uma seta ↗ e leva para outra aba).
  *
  * @param {{
  *   label: string,
@@ -13,6 +16,7 @@
  *   accent?: "slate" | "emerald" | "red" | "indigo" | "amber",
  *   delta?: { label: string, tone: "good" | "bad" | "neutral" } | null,
  *   extra?: React.ReactNode,
+ *   onNavigate?: () => void,
  * }} props
  */
 export default function KpiCard({
@@ -23,6 +27,7 @@ export default function KpiCard({
   accent = "slate",
   delta = null,
   extra = null,
+  onNavigate = null,
 }) {
   const accents = {
     slate: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
@@ -41,21 +46,50 @@ export default function KpiCard({
   };
 
   const iconClass = accents[accent] ?? accents.slate;
+  const clickable = typeof onNavigate === "function";
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
+    <div
+      onClick={clickable ? onNavigate : undefined}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onNavigate();
+              }
+            }
+          : undefined
+      }
+      className={`group rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900 ${
+        clickable
+          ? "cursor-pointer hover:border-velot focus:border-velot focus:outline-none focus:ring-1 focus:ring-velot"
+          : ""
+      }`}
+    >
       <div className="flex items-start justify-between">
         <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
           {label}
         </p>
-        {icon && (
-          <span
-            className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm ${iconClass}`}
-            aria-hidden="true"
-          >
-            {icon}
-          </span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {icon && (
+            <span
+              className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm ${iconClass}`}
+              aria-hidden="true"
+            >
+              {icon}
+            </span>
+          )}
+          {clickable && (
+            <ArrowUpRight
+              size={16}
+              className="text-slate-300 transition-colors group-hover:text-velot dark:text-slate-600"
+              aria-hidden="true"
+            />
+          )}
+        </div>
       </div>
       <div className="mt-3 flex items-center gap-2">
         <p className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">

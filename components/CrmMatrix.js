@@ -1,5 +1,7 @@
 "use client";
 
+import { ArrowUpRight } from "lucide-react";
+
 /** Cor do badge de score (mesmos limiares da antiga Matriz Analítica). */
 function scoreBadge(score) {
   if (score >= 90)
@@ -15,16 +17,33 @@ function scoreBadge(score) {
  * tela. As linhas vêm do `storeReport`, que já está isolado pela pipeline da
  * unidade (unit → 1 linha) ou completo para o admin.
  *
- * @param {{ rows?: Array<Record<string, any>>, title?: string }} props
+ * @param {{ rows?: Array<Record<string, any>>, title?: string, onNavigate?: () => void }} props
  */
-export default function CrmMatrix({ rows = [], title = "Visualização do CRM" }) {
+export default function CrmMatrix({
+  rows = [],
+  title = "Visualização do CRM",
+  onNavigate = null,
+}) {
   const num = "py-2.5 px-2 text-center tabular-nums text-slate-700 dark:text-slate-300";
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
-      <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-        {title}
-      </h3>
+      <div className="mb-4 flex items-center gap-1.5">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          {title}
+        </h3>
+        {onNavigate && (
+          <button
+            type="button"
+            onClick={onNavigate}
+            aria-label="Abrir aba Relatórios"
+            title="Ver Relatórios (score de higiene + avisos)"
+            className="text-slate-300 transition-colors hover:text-velot dark:text-slate-600"
+          >
+            <ArrowUpRight size={16} />
+          </button>
+        )}
+      </div>
 
       {rows.length > 0 ? (
         <div className="max-h-[440px] overflow-auto">

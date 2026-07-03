@@ -1,17 +1,20 @@
 "use client";
 
-import { LogOut, Moon, Sun } from "lucide-react";
+import { LogOut, Moon, Settings, Sun } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 /**
- * Header superior do dashboard. Título, indicador real-time e toggle de tema.
+ * Header superior do dashboard. Título, indicador real-time, engrenagem de
+ * configurações (admin) e toggle de tema.
  *
  * @param {{
  *   title?: string,
  *   lastUpdated?: Date|null,
  *   theme?: "light" | "dark",
  *   onToggleTheme?: () => void,
+ *   isAdmin?: boolean,
+ *   onOpenSettings?: () => void,
  * }} props
  */
 export default function Header({
@@ -19,6 +22,8 @@ export default function Header({
   lastUpdated = null,
   theme = "light",
   onToggleTheme,
+  isAdmin = false,
+  onOpenSettings,
 }) {
   const isDark = theme === "dark";
   const { logout, userData } = useAuth();
@@ -85,6 +90,19 @@ export default function Header({
             Auto-refresh a cada 60s
           </p>
         </div>
+
+        {/* Configurações (admin) — reúne Configurações, Meu Perfil e Acessos */}
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            aria-label="Configurações"
+            title="Configurações (config, perfil e acessos)"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-colors hover:border-velot hover:text-velot dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-velot dark:hover:text-velot"
+          >
+            <Settings size={18} />
+          </button>
+        )}
 
         {/* Toggle de tema (Sol / Lua) */}
         <button
