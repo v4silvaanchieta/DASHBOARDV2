@@ -120,19 +120,19 @@ export default function TrendCharts({
       {hasData ? (
         <div className="space-y-4">
           {METRICS.map((m) => (
-              <div key={m.key} className="flex items-center gap-3">
-                {/* Label + MÉDIA PONDERADA do período à esquerda */}
-                <div className="w-20 shrink-0">
+              <div key={m.key} className="flex items-center gap-4">
+                {/* Label + MÉDIA PONDERADA — centralizados (H e V) */}
+                <div className="flex w-24 shrink-0 flex-col items-center justify-center text-center">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                     {m.label}
                   </p>
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                  <p className="mt-0.5 text-base font-bold text-slate-800 dark:text-slate-100">
                     {m.fmt(summary[m.key])}
                   </p>
                 </div>
 
                 {/* Sparkline ocupando o resto */}
-                <div className="h-12 flex-1">
+                <div className="h-14 flex-1">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
                       data={series}
