@@ -9,6 +9,7 @@ import ConversionFunnel from "@/components/ConversionFunnel";
 import LossReasons from "@/components/LossReasons";
 import CampaignBreakdown from "@/components/CampaignBreakdown";
 import CrmMatrix from "@/components/CrmMatrix";
+import TrendCharts from "@/components/TrendCharts";
 import StoreHygieneTable from "@/components/StoreHygieneTable";
 import ScoreGauge from "@/components/ScoreGauge";
 import MarketingSection from "@/components/MarketingSection";
@@ -171,6 +172,24 @@ export default function DashboardPage() {
       campaignMatchesPipeline(c.adsetName, unitPipeline)
     );
   }, [campaignsData, isUnit, unitPipeline]);
+
+  // ISOLAMENTO NA RAIZ — SDR IA (bruto, SEM filtro de data): base histórica das
+  // Tendências. Para "unit", só os leads cujo telefone cruza com os deals da
+  // própria pipeline (mesma regra do filteredLeadsSdr, mas sem restringir data).
+  const scopedLeadsSdr = useMemo(() => {
+    if (!isUnit) return leadsSdr;
+    const phones = new Set();
+    for (const d of scopedData) {
+      for (const p of [d.telefone, d.cfTelefone]) {
+        const k = phoneKey(p);
+        if (k) phones.add(k);
+      }
+    }
+    return leadsSdr.filter((l) => {
+      const k = phoneKey(l.telefone);
+      return k && phones.has(k);
+    });
+  }, [leadsSdr, isUnit, scopedData]);
 
   // Campanhas filtradas por DATA (sempre) e por LOJA. Para "unit" o escopo já
   // está travado na raiz; para "admin", respeita o filtro global Loja/Franquia
@@ -624,6 +643,14 @@ export default function DashboardPage() {
                       <LossReasons analysis={lossAnalysis} />
                     </div>
                   </div>
+
+                  {/* TENDÊNCIAS — histórico (até 1 ano) ignorando o filtro de
+                      data global, isolado por unidade. */}
+                  <TrendCharts
+                    crmData={scopedData}
+                    campaignsData={scopedCampaigns}
+                    leadsSdr={scopedLeadsSdr}
+                  />
                 </>
               )}
 
