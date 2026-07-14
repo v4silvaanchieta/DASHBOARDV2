@@ -9,7 +9,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { TREND_RANGES, generateTrendData } from "@/lib/trends";
+import {
+  TREND_RANGES,
+  generateTrendData,
+  computeTrendSummary,
+} from "@/lib/trends";
 
 const fmtBRL = (v) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
@@ -69,6 +73,17 @@ export default function TrendCharts({
     [crmData, campaignsData, leadsSdr, trendRange]
   );
 
+  // Médias PONDERADAS de todo o período (não o último dia) — números ao lado
+  // dos sparklines.
+  const summary = useMemo(
+    () =>
+      computeTrendSummary(
+        { deals: crmData, leadsSdr, campaigns: campaignsData },
+        trendRange
+      ),
+    [crmData, campaignsData, leadsSdr, trendRange]
+  );
+
   const hasData = series.length > 0;
 
   return (
@@ -104,17 +119,15 @@ export default function TrendCharts({
 
       {hasData ? (
         <div className="space-y-4">
-          {METRICS.map((m) => {
-            const latest = series[series.length - 1]?.[m.key] ?? 0;
-            return (
+          {METRICS.map((m) => (
               <div key={m.key} className="flex items-center gap-3">
-                {/* Label + valor atual à esquerda */}
+                {/* Label + MÉDIA PONDERADA do período à esquerda */}
                 <div className="w-20 shrink-0">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                     {m.label}
                   </p>
                   <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                    {m.fmt(latest)}
+                    {m.fmt(summary[m.key])}
                   </p>
                 </div>
 
@@ -143,8 +156,7 @@ export default function TrendCharts({
                   </ResponsiveContainer>
                 </div>
               </div>
-            );
-          })}
+          ))}
         </div>
       ) : (
         <div className="flex h-40 items-center justify-center text-center text-sm text-slate-400 dark:text-slate-500">
