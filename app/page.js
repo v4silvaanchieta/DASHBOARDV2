@@ -595,10 +595,10 @@ export default function DashboardPage() {
                     />
                   </div>
 
-                  {/* BLOCO PRINCIPAL — 65% (Racional) / 35% (Emocional).
+                  {/* BLOCO PRINCIPAL — 55% (Racional) / 45% (Emocional).
                       MESMA proporção do bloco inferior p/ divisória alinhada. */}
-                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-[65fr_35fr]">
-                    {/* Coluna Esquerda — Racional (65%) */}
+                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-[55fr_45fr]">
+                    {/* Coluna Esquerda — Racional (55%) */}
                     <div className="space-y-6">
                       <CampaignBreakdown
                         campaigns={filteredCampaignsData}
@@ -606,7 +606,7 @@ export default function DashboardPage() {
                       />
                     </div>
 
-                    {/* Coluna Direita — Emocional (35%) */}
+                    {/* Coluna Direita — Emocional (45%) */}
                     <div className="space-y-6">
                       <ConversionFunnel
                         stages={[
@@ -639,11 +639,11 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* ÁREA INFERIOR — CRM (65%) + Tendências (35%).
+                  {/* ÁREA INFERIOR — CRM (55%) + Tendências (45%).
                       MESMA proporção/gap do bloco superior → divisória reta.
                       TrendCharts usa dados brutos isolados por unidade,
                       ignorando o filtro de data global. */}
-                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-[65fr_35fr]">
+                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-[55fr_45fr]">
                     <CrmMatrix
                       rows={storeReport}
                       title="Visualização do CRM"
