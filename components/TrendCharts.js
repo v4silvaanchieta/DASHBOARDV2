@@ -1,6 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { TREND_RANGES, generateTrendData } from "@/lib/trends";
 
 const fmtBRL = (v) =>
@@ -10,14 +18,34 @@ const fmtBRL = (v) =>
 const fmtPct = (v) => `${(Number(v) || 0).toFixed(1).replace(".", ",")}%`;
 
 /**
- * Tendências — histórico temporal (até 1 ano) das métricas-chave.
+ * Métricas de tendência. CPA em vermelho (padrão de custo); as demais em verde.
+ */
+const METRICS = [
+  { key: "cpa", label: "CPA", color: "#ef4444", fmt: fmtBRL },
+  { key: "ctr", label: "CTR", color: "#10b981", fmt: fmtPct },
+  { key: "qualificado", label: "Qualificação", color: "#10b981", fmt: fmtPct },
+  { key: "ganho", label: "Ganhos", color: "#10b981", fmt: fmtPct },
+];
+
+/** Tooltip minimalista: só a data e o valor formatado. */
+function SparkTooltip({ active, payload, label, fmt }) {
+  if (!active || !payload || payload.length === 0) return null;
+  return (
+    <div className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-800">
+      <p className="text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="font-semibold text-slate-800 dark:text-slate-100">
+        {fmt(payload[0].value)}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Tendências — sparklines históricos (até 1 ano) das métricas-chave.
  *
  * Consome os arrays BRUTOS já isolados pela unidade (crmData, campaignsData,
- * leadsSdr) IGNORANDO o filtro global de data; a janela é controlada localmente
- * pelo `trendRange` (30d / 3m / 1y). A série é gerada por `generateTrendData`.
- *
- * (Fase atual: engine + shell. Os gráficos de linha entram na próxima fase e
- * consomem diretamente o array `series`.)
+ * leadsSdr) IGNORANDO o filtro global de data; a janela é o `trendRange`
+ * (30D / 3M / 1A), recalculando a série instantaneamente ao clicar.
  *
  * @param {{
  *   crmData?: Array<Record<string, any>>,
@@ -41,78 +69,85 @@ export default function TrendCharts({
     [crmData, campaignsData, leadsSdr, trendRange]
   );
 
-  const last = series.length > 0 ? series[series.length - 1] : null;
+  const hasData = series.length > 0;
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Tendências
-          </h3>
-          <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-            Histórico independente do filtro global · isolado por unidade
-          </p>
-        </div>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          Tendências
+        </h3>
 
-        {/* Seletor de janela (30d / 3m / 1y) */}
-        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-800 dark:bg-slate-800/60">
-          {TREND_RANGES.map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              onClick={() => setTrendRange(r.id)}
-              aria-pressed={trendRange === r.id}
-              className={[
-                "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
-                trendRange === r.id
-                  ? "bg-velot text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200",
-              ].join(" ")}
-            >
-              {r.label}
-            </button>
-          ))}
+        {/* Pills de período (30D / 3M / 1A) */}
+        <div className="inline-flex gap-1">
+          {TREND_RANGES.map((r) => {
+            const active = trendRange === r.id;
+            return (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setTrendRange(r.id)}
+                aria-pressed={active}
+                className={[
+                  "rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors",
+                  active
+                    ? "bg-velot text-white shadow-sm"
+                    : "bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700",
+                ].join(" ")}
+              >
+                {r.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {series.length > 0 ? (
-        <>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            <span className="font-semibold text-slate-700 dark:text-slate-200">
-              {series.length}
-            </span>{" "}
-            dias com dados · de {series[0].date} a {last.date}
-          </p>
+      {hasData ? (
+        <div className="space-y-4">
+          {METRICS.map((m) => {
+            const latest = series[series.length - 1]?.[m.key] ?? 0;
+            return (
+              <div key={m.key} className="flex items-center gap-3">
+                {/* Label + valor atual à esquerda */}
+                <div className="w-20 shrink-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                    {m.label}
+                  </p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                    {m.fmt(latest)}
+                  </p>
+                </div>
 
-          {/* Prévia do último dia (a série completa alimenta os gráficos na
-              próxima fase). */}
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
-              { label: "CPA", value: fmtBRL(last.cpa) },
-              { label: "CTR", value: fmtPct(last.ctr) },
-              { label: "Qualificado", value: fmtPct(last.qualificado) },
-              { label: "Ganho", value: fmtPct(last.ganho) },
-            ].map((m) => (
-              <div
-                key={m.label}
-                className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60"
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                  {m.label}
-                </p>
-                <p className="mt-0.5 text-lg font-bold text-slate-800 dark:text-slate-100">
-                  {m.value}
-                </p>
+                {/* Sparkline ocupando o resto */}
+                <div className="h-12 flex-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={series}
+                      margin={{ top: 4, right: 4, bottom: 4, left: 4 }}
+                    >
+                      <XAxis dataKey="date" hide />
+                      <YAxis hide domain={["auto", "auto"]} />
+                      <Tooltip
+                        content={<SparkTooltip fmt={m.fmt} />}
+                        cursor={{ stroke: m.color, strokeOpacity: 0.3 }}
+                      />
+                      <Line
+                        dataKey={m.key}
+                        type="monotone"
+                        stroke={m.color}
+                        strokeWidth={2}
+                        dot={false}
+                        isAnimationActive={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-            ))}
-          </div>
-          <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">
-            Última leitura ({last.date}) · gráficos de linha na próxima fase.
-          </p>
-        </>
+            );
+          })}
+        </div>
       ) : (
-        <div className="flex h-24 items-center justify-center text-center text-sm text-slate-400 dark:text-slate-500">
+        <div className="flex h-40 items-center justify-center text-center text-sm text-slate-400 dark:text-slate-500">
           Sem dados no período selecionado.
         </div>
       )}

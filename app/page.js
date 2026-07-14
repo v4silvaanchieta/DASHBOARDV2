@@ -604,11 +604,6 @@ export default function DashboardPage() {
                         campaigns={filteredCampaignsData}
                         onNavigate={isAdmin ? () => setActiveTab("campanhas") : undefined}
                       />
-                      <CrmMatrix
-                        rows={storeReport}
-                        title="Visualização do CRM"
-                        onNavigate={isAdmin ? () => setActiveTab("relatorios") : undefined}
-                      />
                     </div>
 
                     {/* Coluna Direita — Emocional (40% = 2/5) */}
@@ -644,13 +639,21 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* TENDÊNCIAS — histórico (até 1 ano) ignorando o filtro de
-                      data global, isolado por unidade. */}
-                  <TrendCharts
-                    crmData={scopedData}
-                    campaignsData={scopedCampaigns}
-                    leadsSdr={scopedLeadsSdr}
-                  />
+                  {/* ÁREA INFERIOR — CRM (~65%) + Tendências (~35%).
+                      TrendCharts usa dados brutos isolados por unidade,
+                      ignorando o filtro de data global. */}
+                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
+                    <CrmMatrix
+                      rows={storeReport}
+                      title="Visualização do CRM"
+                      onNavigate={isAdmin ? () => setActiveTab("relatorios") : undefined}
+                    />
+                    <TrendCharts
+                      crmData={scopedData}
+                      campaignsData={scopedCampaigns}
+                      leadsSdr={scopedLeadsSdr}
+                    />
+                  </div>
                 </>
               )}
 
