@@ -229,12 +229,17 @@ export default function DashboardPage() {
     [filteredData]
   );
 
-  // FILA DE ATENDIMENTO (radar de gargalo): leads parados na pré-qualificação
-  // SDR (aberto + etapa inicial), agrupados por unidade e ordenados do maior
-  // acúmulo para o menor. Sai do filteredData -> RBAC/isolamento preservado.
+  // FILA DE ATENDIMENTO (radar de gargalo ABSOLUTO): leads parados na pré-
+  // qualificação SDR (aberto + etapa inicial), agrupados por unidade e ordenados
+  // do maior acúmulo para o menor.
+  // Fonte = scopedData (bruto, JÁ isolado por unidade = RBAC preservado). Só o
+  // filtro de DATA é ignorado (dateRange: "all") para que leads travados há
+  // dias não sumam ao filtrar "Hoje"; loja/origem seguem valendo.
   const sdrQueueByUnit = useMemo(() => {
+    const eff = isUnit ? { ...filters, pipeline: unitPipeline } : filters;
+    const base = applyFilters(scopedData, { ...eff, dateRange: "all" });
     const counts = new Map();
-    for (const row of filteredData) {
+    for (const row of base) {
       if (!isAwaitingSdrLead(row)) continue;
       const loja = String(row.pipeline ?? "").trim() || "Sem Loja";
       counts.set(loja, (counts.get(loja) || 0) + 1);
@@ -242,7 +247,7 @@ export default function DashboardPage() {
     return Array.from(counts.entries())
       .map(([loja, count]) => ({ loja, count }))
       .sort((a, b) => b.count - a.count);
-  }, [filteredData]);
+  }, [scopedData, filters, isUnit, unitPipeline]);
 
   // PERÍODO ANTERIOR (Period-over-Period): mesma duração imediatamente antes do
   // período atual, respeitando o isolamento de loja/unidade. null = sem comparação.
