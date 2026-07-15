@@ -9,14 +9,27 @@
  * @param {{ rows: Array<{ loja: string, count: number }> }} props
  */
 export default function SdrQueue({ rows = [] }) {
+  // Total geral da rede (soma dos leads parados de todas as lojas).
+  const total = rows.reduce((acc, r) => acc + r.count, 0);
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-        Fila de Atendimento (Pré-Qualificação SDR)
-      </h2>
-      <p className="mb-4 mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-        Leads aguardando o primeiro movimento da unidade (Real-Time)
-      </p>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Fila de Atendimento (Pré-Qualificação SDR)
+          </h2>
+          <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
+            Leads aguardando o primeiro movimento da unidade (Real-Time)
+          </p>
+        </div>
+        {total > 0 && (
+          <span className="shrink-0 whitespace-nowrap rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
+            Total em espera: {total.toLocaleString("pt-BR")}{" "}
+            {total === 1 ? "lead" : "leads"}
+          </span>
+        )}
+      </div>
 
       {rows.length > 0 ? (
         <div className="max-h-56 overflow-y-auto">
