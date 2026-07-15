@@ -51,9 +51,18 @@ import {
 import { buildUnifiedContacts, phoneKey } from "@/lib/crossref";
 import { computeProductRevenue } from "@/lib/products";
 import { campaignMatchesPipeline, computeCampaignTotals } from "@/lib/campaigns";
+import { currentStateFromMovements } from "@/lib/movements";
 import { makeDelta, fmtCount, prevHint } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+
+/**
+ * Janela de recência (dias) da Fila de Atendimento SDR: só entram leads cuja
+ * última movimentação em pré-qualificação foi nos últimos N dias. Filtra os
+ * "fantasmas" (leads antigos que o CRM moveu mas o log não registrou a saída).
+ * Ajustável.
+ */
+const SDR_QUEUE_RECENT_DAYS = 3;
 
 /** Rótulos das telas (título do Header) — navegação é contextual, sem menu. */
 const TAB_LABELS = {
@@ -66,7 +75,7 @@ const TAB_LABELS = {
 };
 
 export default function DashboardPage() {
-  const { data, leadsSdr, campaignsData, loading, error, lastUpdated } =
+  const { data, leadsSdr, movimentacao, campaignsData, loading, error, lastUpdated } =
     useDashboardData();
 
   // RBAC / Data Siloing: perfil do usuário (admin vê tudo; unit vê só sua pipeline).
@@ -229,25 +238,31 @@ export default function DashboardPage() {
     [filteredData]
   );
 
-  // FILA DE ATENDIMENTO (radar de gargalo ABSOLUTO): leads parados na pré-
-  // qualificação SDR (aberto + etapa inicial), agrupados por unidade e ordenados
-  // do maior acúmulo para o menor.
-  // Fonte = scopedData (bruto, JÁ isolado por unidade = RBAC preservado). Só o
-  // filtro de DATA é ignorado (dateRange: "all") para que leads travados há
-  // dias não sumam ao filtrar "Hoje"; loja/origem seguem valendo.
+  // FILA DE ATENDIMENTO (radar de gargalo) — ESTADO VIVO.
+  // A aba "Deals" congela a etapa/status de deals antigos; a "Movimentação" é o
+  // log vivo, então usamos a ÚLTIMA movimentação de cada deal (estado atual).
+  // Conta os leads cuja etapa ATUAL = Pré-Qualificação (SDR/IA) + status aberto E
+  // cuja última movimentação foi RECENTE — isso exclui os "fantasmas" (leads
+  // antigos que o CRM já moveu, mas cuja saída o log não registrou). Sem a trava
+  // de recência a fila inflava (ex.: Marília mostrava 30 quando o real são ~4).
+  // RBAC: unidade só enxerga a própria pipeline.
   const sdrQueueByUnit = useMemo(() => {
-    const eff = isUnit ? { ...filters, pipeline: unitPipeline } : filters;
-    const base = applyFilters(scopedData, { ...eff, dateRange: "all" });
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - SDR_QUEUE_RECENT_DAYS);
+
+    const atual = currentStateFromMovements(movimentacao);
     const counts = new Map();
-    for (const row of base) {
+    for (const row of atual) {
+      if (isUnit && String(row.pipeline ?? "").trim() !== unitPipeline) continue;
       if (!isAwaitingSdrLead(row)) continue;
+      if (!row._movedAt || row._movedAt < cutoff) continue;
       const loja = String(row.pipeline ?? "").trim() || "Sem Loja";
       counts.set(loja, (counts.get(loja) || 0) + 1);
     }
     return Array.from(counts.entries())
       .map(([loja, count]) => ({ loja, count }))
       .sort((a, b) => b.count - a.count);
-  }, [scopedData, filters, isUnit, unitPipeline]);
+  }, [movimentacao, isUnit, unitPipeline]);
 
   // PERÍODO ANTERIOR (Period-over-Period): mesma duração imediatamente antes do
   // período atual, respeitando o isolamento de loja/unidade. null = sem comparação.
