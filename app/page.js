@@ -13,7 +13,7 @@ import TrendCharts from "@/components/TrendCharts";
 import StoreHygieneTable from "@/components/StoreHygieneTable";
 import ScoreGauge from "@/components/ScoreGauge";
 import MarketingSection from "@/components/MarketingSection";
-import SourceCrossSection from "@/components/SourceCrossSection";
+import SdrQueue from "@/components/SdrQueue";
 import StagnantAlert from "@/components/StagnantAlert";
 import NegociosTab from "@/components/tabs/NegociosTab";
 import Campanhas from "@/components/tabs/Campanhas";
@@ -34,6 +34,7 @@ import {
   computeMetrics,
   countUniqueLeads,
   isQualifiedLead,
+  isAwaitingSdrLead,
   formatBRL,
   SLA_TARGET_MINUTES,
 } from "@/lib/metrics";
@@ -47,11 +48,7 @@ import {
   computeCampaignPerformance,
   computeAiEfficiency,
 } from "@/lib/marketing";
-import {
-  computeStoreGeneration,
-  buildUnifiedContacts,
-  phoneKey,
-} from "@/lib/crossref";
+import { buildUnifiedContacts, phoneKey } from "@/lib/crossref";
 import { computeProductRevenue } from "@/lib/products";
 import { campaignMatchesPipeline, computeCampaignTotals } from "@/lib/campaigns";
 import { makeDelta, fmtCount, prevHint } from "@/lib/format";
@@ -232,6 +229,21 @@ export default function DashboardPage() {
     [filteredData]
   );
 
+  // FILA DE ATENDIMENTO (radar de gargalo): leads parados na pré-qualificação
+  // SDR (aberto + etapa inicial), agrupados por unidade e ordenados do maior
+  // acúmulo para o menor. Sai do filteredData -> RBAC/isolamento preservado.
+  const sdrQueueByUnit = useMemo(() => {
+    const counts = new Map();
+    for (const row of filteredData) {
+      if (!isAwaitingSdrLead(row)) continue;
+      const loja = String(row.pipeline ?? "").trim() || "Sem Loja";
+      counts.set(loja, (counts.get(loja) || 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([loja, count]) => ({ loja, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [filteredData]);
+
   // PERÍODO ANTERIOR (Period-over-Period): mesma duração imediatamente antes do
   // período atual, respeitando o isolamento de loja/unidade. null = sem comparação.
   const compareMetrics = useMemo(() => {
@@ -273,10 +285,6 @@ export default function DashboardPage() {
   const aiEfficiency = useMemo(
     () => computeAiEfficiency(filteredData),
     [filteredData]
-  );
-  const generation = useMemo(
-    () => computeStoreGeneration(filteredLeadsSdr, filteredData),
-    [filteredLeadsSdr, filteredData]
   );
   const products = useMemo(
     () => computeProductRevenue(filteredData),
@@ -696,7 +704,7 @@ export default function DashboardPage() {
                   />
                   <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                     <StagnantAlert slides={activeSlides} />
-                    <SourceCrossSection generation={generation} />
+                    <SdrQueue rows={sdrQueueByUnit} />
                   </div>
                   <RelatoriosTab
                     recebidosCount={relatoriosResumo.recebidos}
