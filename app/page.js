@@ -280,6 +280,17 @@ export default function DashboardPage() {
       ? compareMetrics.faturamento / prevCampaignTotals.spend
       : null;
 
+  // CAC = Investimento (Spend) / vendas ganhas (clientes adquiridos). Custo por
+  // cliente — quanto MENOR, melhor. Período anterior idem, quando há vendas.
+  const cac =
+    metrics.vendasRealizadas > 0
+      ? campaignTotals.spend / metrics.vendasRealizadas
+      : 0;
+  const prevCac =
+    compareMetrics && prevCampaignTotals && compareMetrics.vendasRealizadas > 0
+      ? prevCampaignTotals.spend / compareMetrics.vendasRealizadas
+      : null;
+
   const hygieneRows = useMemo(
     () => computeStoreHygiene(filteredData, settings.penalties),
     [filteredData, settings.penalties]
@@ -541,7 +552,7 @@ export default function DashboardPage() {
                   {/* LINHA 1 — 6 KPIs macro: 3 de Marketing (esquerda) + 3 de
                       Finanças (direita). Só título + número + badge de variação,
                       com o comparativo "vs X no período anterior". */}
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
                     {/* — Bloco Esquerdo: Tráfego / Marketing — */}
                     <KpiCard
                       label="Conversas Iniciadas"
@@ -598,6 +609,15 @@ export default function DashboardPage() {
                       delta={makeDelta(metrics.faturamento, compareMetrics?.faturamento)}
                       hint={prevHint(compareMetrics?.faturamento ?? null, formatBRL)}
                       onNavigate={isAdmin ? () => setActiveTab("produtos") : undefined}
+                    />
+                    <KpiCard
+                      label="CAC"
+                      value={cac > 0 ? formatBRL(cac) : "—"}
+                      icon="🧾"
+                      accent="amber"
+                      // CAC: cair é BOM -> goodWhenDown inverte verde/vermelho.
+                      delta={makeDelta(cac, prevCac, true)}
+                      hint={prevHint(prevCac, formatBRL)}
                     />
                     <KpiCard
                       label="ROAS"
