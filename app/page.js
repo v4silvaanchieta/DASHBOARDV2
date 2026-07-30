@@ -607,7 +607,11 @@ export default function DashboardPage() {
                       icon="💰"
                       accent="emerald"
                       delta={makeDelta(metrics.faturamento, compareMetrics?.faturamento)}
-                      hint={prevHint(compareMetrics?.faturamento ?? null, formatBRL)}
+                      // Mostra a CONTAGEM de vendas ganhas (por status, em qualquer
+                      // etapa) — o valor R$ às vezes falta na planilha (QUANTIA=0).
+                      hint={`${fmtCount(metrics.vendasRealizadas)} ${
+                        metrics.vendasRealizadas === 1 ? "venda ganha" : "vendas ganhas"
+                      }`}
                       onNavigate={isAdmin ? () => setActiveTab("produtos") : undefined}
                     />
                     <KpiCard
