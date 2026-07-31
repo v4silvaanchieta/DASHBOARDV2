@@ -259,6 +259,42 @@ export default function DashboardPage() {
     return computeMetrics(applyFilters(scopedData, eff));
   }, [scopedData, filters, isUnit, unitPipeline]);
 
+  // GANHOS pela DATA DO GANHO (DATA ATUALIZAÇÃO), não pela criação. A venda é
+  // atribuída ao período em que FECHOU (virou "Ganho"), não em que o lead entrou:
+  // um negócio criado em junho e ganho em julho conta como venda de JULHO. Por
+  // isso o filtro de período aqui usa a coluna de atualização (dateField). Espelha
+  // o isolamento de loja/unidade (RBAC) e o filtro de origem já embutidos em eff.
+  const wonInPeriod = useMemo(() => {
+    const eff = isUnit ? { ...filters, pipeline: unitPipeline } : filters;
+    const ganhos = scopedData.filter(
+      (r) => String(r.status ?? "").trim().toLowerCase() === "ganho"
+    );
+    return applyFilters(ganhos, eff, "dataAtualizacao");
+  }, [scopedData, filters, isUnit, unitPipeline]);
+
+  const wonMetrics = useMemo(
+    () => ({
+      faturamento: wonInPeriod.reduce((s, r) => s + (Number(r.quantia) || 0), 0),
+      vendasRealizadas: wonInPeriod.length,
+    }),
+    [wonInPeriod]
+  );
+
+  // Mesmo cálculo para o período anterior (comparação MoM dos cards financeiros).
+  const prevWonMetrics = useMemo(() => {
+    const pf = previousPeriodFilters(filters);
+    if (!pf) return null;
+    const eff = isUnit ? { ...pf, pipeline: unitPipeline } : pf;
+    const ganhos = scopedData.filter(
+      (r) => String(r.status ?? "").trim().toLowerCase() === "ganho"
+    );
+    const won = applyFilters(ganhos, eff, "dataAtualizacao");
+    return {
+      faturamento: won.reduce((s, r) => s + (Number(r.quantia) || 0), 0),
+      vendasRealizadas: won.length,
+    };
+  }, [scopedData, filters, isUnit, unitPipeline]);
+
   // KPIs de tráfego pago (Marketing) — totais do período atual e anterior para
   // os cards macro do topo (conversas, CPA, CTR, investimento).
   const campaignTotals = useMemo(
@@ -271,24 +307,24 @@ export default function DashboardPage() {
     [previousCampaignsData]
   );
 
-  // ROAS = Ganhos (Faturamento Realizado do CRM) / Investimento (Spend). Período
-  // anterior idem, quando há comparação e investimento > 0.
+  // ROAS = Ganhos (Faturamento Realizado do CRM, pela DATA DO GANHO) / Investimento
+  // (Spend). Período anterior idem, quando há comparação e investimento > 0.
   const roas =
-    campaignTotals.spend > 0 ? metrics.faturamento / campaignTotals.spend : 0;
+    campaignTotals.spend > 0 ? wonMetrics.faturamento / campaignTotals.spend : 0;
   const prevRoas =
-    compareMetrics && prevCampaignTotals && prevCampaignTotals.spend > 0
-      ? compareMetrics.faturamento / prevCampaignTotals.spend
+    prevWonMetrics && prevCampaignTotals && prevCampaignTotals.spend > 0
+      ? prevWonMetrics.faturamento / prevCampaignTotals.spend
       : null;
 
-  // CAC = Investimento (Spend) / vendas ganhas (clientes adquiridos). Custo por
-  // cliente — quanto MENOR, melhor. Período anterior idem, quando há vendas.
+  // CAC = Investimento (Spend) / vendas ganhas no período (pela DATA DO GANHO).
+  // Custo por cliente — quanto MENOR, melhor. Período anterior idem, quando há vendas.
   const cac =
-    metrics.vendasRealizadas > 0
-      ? campaignTotals.spend / metrics.vendasRealizadas
+    wonMetrics.vendasRealizadas > 0
+      ? campaignTotals.spend / wonMetrics.vendasRealizadas
       : 0;
   const prevCac =
-    compareMetrics && prevCampaignTotals && compareMetrics.vendasRealizadas > 0
-      ? prevCampaignTotals.spend / compareMetrics.vendasRealizadas
+    prevWonMetrics && prevCampaignTotals && prevWonMetrics.vendasRealizadas > 0
+      ? prevCampaignTotals.spend / prevWonMetrics.vendasRealizadas
       : null;
 
   const hygieneRows = useMemo(
@@ -603,14 +639,19 @@ export default function DashboardPage() {
                     />
                     <KpiCard
                       label="Ganhos"
-                      value={formatBRL(metrics.faturamento)}
+                      value={formatBRL(wonMetrics.faturamento)}
                       icon="💰"
                       accent="emerald"
-                      delta={makeDelta(metrics.faturamento, compareMetrics?.faturamento)}
-                      // Mostra a CONTAGEM de vendas ganhas (por status, em qualquer
-                      // etapa) — o valor R$ às vezes falta na planilha (QUANTIA=0).
-                      hint={`${fmtCount(metrics.vendasRealizadas)} ${
-                        metrics.vendasRealizadas === 1 ? "venda ganha" : "vendas ganhas"
+                      delta={makeDelta(
+                        wonMetrics.faturamento,
+                        prevWonMetrics?.faturamento
+                      )}
+                      // Vendas GANHAS no período pela DATA DO GANHO (DATA
+                      // ATUALIZAÇÃO), não pela criação: um negócio fechado agora
+                      // conta agora, mesmo que o lead tenha entrado antes. Hint
+                      // mostra a contagem (o valor R$ às vezes falta na planilha).
+                      hint={`${fmtCount(wonMetrics.vendasRealizadas)} ${
+                        wonMetrics.vendasRealizadas === 1 ? "venda ganha" : "vendas ganhas"
                       }`}
                       onNavigate={isAdmin ? () => setActiveTab("produtos") : undefined}
                     />
@@ -667,8 +708,9 @@ export default function DashboardPage() {
                             captureLabel: "Fecham",
                           },
                           {
+                            // Ganhos pela DATA DO GANHO (consistente com o card).
                             label: "Ganhos",
-                            value: metrics.vendasRealizadas,
+                            value: wonMetrics.vendasRealizadas,
                             color: "#6ee7b7",
                           },
                         ]}
@@ -717,7 +759,7 @@ export default function DashboardPage() {
                     campaigns={campaigns}
                     aiEfficiency={aiEfficiency}
                     leadsCount={metrics.leadsGerados}
-                    revenue={metrics.faturamento}
+                    revenue={wonMetrics.faturamento}
                     spend={campaignSpend}
                     paidCampaignsCount={filteredCampaignsData.length}
                   />
