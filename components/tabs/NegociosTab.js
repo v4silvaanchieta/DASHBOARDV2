@@ -63,7 +63,7 @@ function matchesStage(row, value) {
 
 /**
  * Aba "Negócios" — lista unificada (CRM + leads exclusivos do SDR IA).
- * Colunas: Data | Lead/Deal | Telefone (wa.me) | Estágio | Proprietário | Valor.
+ * Colunas: Data | Lead/Deal | Telefone (wa.me) | Estágio | Pipeline | Valor.
  *
  * @param {{ data: Array<Record<string, any>> }} props
  */
@@ -142,7 +142,7 @@ export default function NegociosTab({ data }) {
               <th className="py-2 pr-4 font-semibold">Lead / Deal</th>
               <th className="py-2 pr-4 font-semibold">Telefone</th>
               <th className="py-2 pr-4 font-semibold">Estágio Atual</th>
-              <th className="py-2 pr-4 font-semibold">Proprietário</th>
+              <th className="py-2 pr-4 font-semibold">Pipeline</th>
               <th className="py-2 text-right font-semibold">Valor</th>
             </tr>
           </thead>
@@ -187,7 +187,7 @@ export default function NegociosTab({ data }) {
                     )}
                   </td>
                   <td className="py-2.5 pr-4 text-slate-600 dark:text-slate-400">
-                    {row.proprietario || "—"}
+                    {row.pipeline || "—"}
                   </td>
                   <td className="py-2.5 text-right tabular-nums text-slate-700 dark:text-slate-300">
                     {formatBRL(Number(row.quantia) || 0)}
