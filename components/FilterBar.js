@@ -3,6 +3,7 @@
 import {
   DATE_RANGE_OPTIONS,
   PIPELINE_ALL,
+  PIPELINE_FRONTLINE,
   SOURCE_ALL,
   SOURCE_V4,
 } from "@/lib/filters";
@@ -75,6 +76,9 @@ export default function FilterBar({
               onChange={(e) => update({ pipeline: e.target.value })}
             >
               <option value={PIPELINE_ALL}>Todas as Lojas</option>
+              <option value={PIPELINE_FRONTLINE}>
+                Linha de Frente (campanhas ativas)
+              </option>
               {matrizOption && <option value={matrizOption}>Matriz</option>}
               {franquiaOptions.map((opt) => (
                 <option key={opt} value={opt}>
