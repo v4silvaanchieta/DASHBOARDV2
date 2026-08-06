@@ -28,6 +28,7 @@ import {
   previousPeriodFilters,
   DATE_RANGE_DEFAULT,
   PIPELINE_ALL,
+  PIPELINE_FRONTLINE,
   SOURCE_ALL,
 } from "@/lib/filters";
 import {
@@ -50,7 +51,11 @@ import {
 } from "@/lib/marketing";
 import { buildUnifiedContacts, phoneKey } from "@/lib/crossref";
 import { computeProductRevenue } from "@/lib/products";
-import { campaignMatchesPipeline, computeCampaignTotals } from "@/lib/campaigns";
+import {
+  campaignMatchesPipeline,
+  campaignMatchesFrontline,
+  computeCampaignTotals,
+} from "@/lib/campaigns";
 import { makeDelta, fmtCount, prevHint } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -195,7 +200,11 @@ export default function DashboardPage() {
     return scopedCampaigns.filter((c) => {
       if (!passesDateFilter(c.date, filters)) return false;
       if (!isUnit && filters.pipeline && filters.pipeline !== PIPELINE_ALL) {
-        if (!campaignMatchesPipeline(c.adsetName, filters.pipeline)) return false;
+        if (filters.pipeline === PIPELINE_FRONTLINE) {
+          if (!campaignMatchesFrontline(c.adsetName)) return false;
+        } else if (!campaignMatchesPipeline(c.adsetName, filters.pipeline)) {
+          return false;
+        }
       }
       return true;
     });
@@ -216,7 +225,11 @@ export default function DashboardPage() {
     return scopedCampaigns.filter((c) => {
       if (!passesDateFilter(c.date, pf)) return false;
       if (!isUnit && pf.pipeline && pf.pipeline !== PIPELINE_ALL) {
-        if (!campaignMatchesPipeline(c.adsetName, pf.pipeline)) return false;
+        if (pf.pipeline === PIPELINE_FRONTLINE) {
+          if (!campaignMatchesFrontline(c.adsetName)) return false;
+        } else if (!campaignMatchesPipeline(c.adsetName, pf.pipeline)) {
+          return false;
+        }
       }
       return true;
     });
@@ -353,10 +366,32 @@ export default function DashboardPage() {
     return buildUnifiedContacts(filteredData, sdrSource);
   }, [filteredData, filteredLeadsSdr, filters.pipeline]);
 
+  // Base da MATRIZ do CRM: os GANHOS entram pela DATA DO GANHO (dataAtualizacao),
+  // exatamente como o card e o funil — assim a coluna "Ganhos" da matriz bate com
+  // os "Ganhos" do funil. Abertos e perdidos continuam pela DATA DE CRIAÇÃO (o
+  // perdido segue a mesma base dos "Motivos de Perda"). Como cada negócio cai em
+  // um único balde, a reconciliação (Leads = abertos+ganhos+perdidos) se mantém.
+  const crmPeriodData = useMemo(() => {
+    const eff = isUnit ? { ...filters, pipeline: unitPipeline } : filters;
+    const isWon = (r) =>
+      String(r.status ?? "").trim().toLowerCase() === "ganho";
+    const ganhos = applyFilters(
+      scopedData.filter(isWon),
+      eff,
+      "dataAtualizacao"
+    );
+    const restante = applyFilters(
+      scopedData.filter((r) => !isWon(r)),
+      eff,
+      "dataCriacao"
+    );
+    return [...restante, ...ganhos];
+  }, [scopedData, filters, isUnit, unitPipeline]);
+
   // Matriz analítica da aba Relatórios (funil + higiene por unidade).
   const storeReport = useMemo(
-    () => computeStoreReport(filteredData, settings.penalties),
-    [filteredData, settings.penalties]
+    () => computeStoreReport(crmPeriodData, settings.penalties),
+    [crmPeriodData, settings.penalties]
   );
 
   // Resumo executivo da aba Relatórios. Usa a MESMA base do menu principal:
@@ -397,6 +432,8 @@ export default function DashboardPage() {
     ? unitPipeline
     : filters.pipeline === PIPELINE_ALL
     ? "Todas as Unidades"
+    : filters.pipeline === PIPELINE_FRONTLINE
+    ? "Linha de Frente"
     : filters.pipeline;
 
   // Carrossel de Alertas Operacionais (4 slides) — derivado de hygieneRows.
