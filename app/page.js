@@ -193,6 +193,47 @@ export default function DashboardPage() {
     });
   }, [leadsSdr, isUnit, scopedData]);
 
+  // ===== TENDÊNCIAS filtradas por LOJA/FRANQUIA (mas SEM filtro de data — as
+  // Tendências têm janela própria 30D/3M/1A). Para "unit" o escopo já está na raiz.
+  // Assim o histórico reflete a unidade selecionada no filtro Loja/Franquia.
+  const trendCrmData = useMemo(() => {
+    if (isUnit) return scopedData;
+    return applyFilters(scopedData, {
+      pipeline: filters.pipeline,
+      dateRange: "all",
+      source: SOURCE_ALL,
+    });
+  }, [scopedData, isUnit, filters.pipeline]);
+
+  const trendCampaignsData = useMemo(() => {
+    if (isUnit) return scopedCampaigns;
+    const p = filters.pipeline;
+    if (!p || p === PIPELINE_ALL) return scopedCampaigns;
+    return scopedCampaigns.filter((c) =>
+      p === PIPELINE_FRONTLINE
+        ? campaignMatchesFrontline(c.adsetName)
+        : campaignMatchesPipeline(c.adsetName, p)
+    );
+  }, [scopedCampaigns, isUnit, filters.pipeline]);
+
+  const trendLeadsSdr = useMemo(() => {
+    if (isUnit) return scopedLeadsSdr;
+    const p = filters.pipeline;
+    if (!p || p === PIPELINE_ALL) return scopedLeadsSdr;
+    // Loja específica / Linha de Frente: cruza SDR por telefone com os deals do escopo.
+    const phones = new Set();
+    for (const d of trendCrmData) {
+      for (const ph of [d.telefone, d.cfTelefone]) {
+        const k = phoneKey(ph);
+        if (k) phones.add(k);
+      }
+    }
+    return scopedLeadsSdr.filter((l) => {
+      const k = phoneKey(l.telefone);
+      return k && phones.has(k);
+    });
+  }, [scopedLeadsSdr, isUnit, filters.pipeline, trendCrmData]);
+
   // Campanhas filtradas por DATA (sempre) e por LOJA. Para "unit" o escopo já
   // está travado na raiz; para "admin", respeita o filtro global Loja/Franquia
   // (uma loja específica casa pela cidade no Adset; "Todas as Lojas" libera tudo).
@@ -771,9 +812,9 @@ export default function DashboardPage() {
                       onNavigate={isAdmin ? () => setActiveTab("relatorios") : undefined}
                     />
                     <TrendCharts
-                      crmData={scopedData}
-                      campaignsData={scopedCampaigns}
-                      leadsSdr={scopedLeadsSdr}
+                      crmData={trendCrmData}
+                      campaignsData={trendCampaignsData}
+                      leadsSdr={trendLeadsSdr}
                     />
                   </div>
                 </>

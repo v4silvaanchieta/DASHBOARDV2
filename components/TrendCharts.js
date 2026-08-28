@@ -20,15 +20,30 @@ const fmtBRL = (v) =>
     Number.isFinite(v) ? v : 0
   );
 const fmtPct = (v) => `${(Number(v) || 0).toFixed(1).replace(".", ",")}%`;
+const fmtInt = (v) =>
+  new Intl.NumberFormat("pt-BR").format(Math.round(Number(v) || 0));
 
 /**
  * Métricas de tendência. CPA em vermelho (padrão de custo); as demais em verde.
+ * As 3 últimas são VOLUMES ABSOLUTOS (quantidade), não taxas.
  */
 const METRICS = [
   { key: "cpa", label: "CPA", color: "#ef4444", fmt: fmtBRL },
   { key: "ctr", label: "CTR", color: "#10b981", fmt: fmtPct },
   { key: "qualificado", label: "Qualificação", color: "#10b981", fmt: fmtPct },
-  { key: "ganho", label: "Ganhos", color: "#10b981", fmt: fmtPct },
+  {
+    key: "conversas",
+    label: "Conversas Iniciadas",
+    color: "#10b981",
+    fmt: fmtInt,
+  },
+  {
+    key: "qualificadosCrm",
+    label: "Qualificados CRM",
+    color: "#10b981",
+    fmt: fmtInt,
+  },
+  { key: "ganhos", label: "Ganhos", color: "#10b981", fmt: fmtInt },
 ];
 
 /** Tooltip minimalista: só a data e o valor formatado. */
