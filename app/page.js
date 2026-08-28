@@ -756,18 +756,27 @@ export default function DashboardPage() {
                     />
                   </div>
 
-                  {/* BLOCO PRINCIPAL — 55% (Racional) / 45% (Emocional).
-                      MESMA proporção do bloco inferior p/ divisória alinhada. */}
-                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-[55fr_45fr]">
-                    {/* Coluna Esquerda — Racional (55%) */}
+                  {/* BLOCO PRINCIPAL — Racional (55%) / Emocional (45%).
+                      Cada coluna empilha de forma INDEPENDENTE (items-start): a
+                      coluna da direita "sobe" e preenche o espaço, sem vão entre
+                      Motivos de Perda e Tendências. */}
+                  <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[55fr_45fr]">
+                    {/* Coluna Esquerda — Racional (55%): Campanhas → CRM */}
                     <div className="space-y-6">
                       <CampaignBreakdown
                         campaigns={filteredCampaignsData}
                         onNavigate={isAdmin ? () => setActiveTab("campanhas") : undefined}
                       />
+                      <CrmMatrix
+                        rows={storeReport}
+                        title="Visualização do CRM"
+                        onNavigate={isAdmin ? () => setActiveTab("relatorios") : undefined}
+                      />
                     </div>
 
-                    {/* Coluna Direita — Emocional (45%) */}
+                    {/* Coluna Direita — Emocional (45%): Funil → Motivos → Tendências.
+                        TrendCharts usa dados brutos isolados por unidade, ignorando
+                        o filtro de data global. */}
                     <div className="space-y-6">
                       <ConversionFunnel
                         stages={[
@@ -798,24 +807,12 @@ export default function DashboardPage() {
                         ]}
                       />
                       <LossReasons analysis={lossAnalysis} />
+                      <TrendCharts
+                        crmData={trendCrmData}
+                        campaignsData={trendCampaignsData}
+                        leadsSdr={trendLeadsSdr}
+                      />
                     </div>
-                  </div>
-
-                  {/* ÁREA INFERIOR — CRM (55%) + Tendências (45%).
-                      MESMA proporção/gap do bloco superior → divisória reta.
-                      TrendCharts usa dados brutos isolados por unidade,
-                      ignorando o filtro de data global. */}
-                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-[55fr_45fr]">
-                    <CrmMatrix
-                      rows={storeReport}
-                      title="Visualização do CRM"
-                      onNavigate={isAdmin ? () => setActiveTab("relatorios") : undefined}
-                    />
-                    <TrendCharts
-                      crmData={trendCrmData}
-                      campaignsData={trendCampaignsData}
-                      leadsSdr={trendLeadsSdr}
-                    />
                   </div>
                 </>
               )}
