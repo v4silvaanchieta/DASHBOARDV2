@@ -357,20 +357,13 @@ export default function DashboardPage() {
     [filteredData]
   );
 
-  // Lista unificada da aba Negócios: DEALS + leads exclusivos do SDR (sem duplicar).
-  // Ao isolar uma loja específica, NÃO inclui leads "Apenas no SDR IA" (que não têm
-  // pipeline) — eles só aparecem quando o filtro está em "Todas as Lojas".
-  const negociosList = useMemo(() => {
-    const sdrSource =
-      filters.pipeline === PIPELINE_ALL ? filteredLeadsSdr : [];
-    return buildUnifiedContacts(filteredData, sdrSource);
-  }, [filteredData, filteredLeadsSdr, filters.pipeline]);
-
-  // Base da MATRIZ do CRM: os GANHOS entram pela DATA DO GANHO (dataAtualizacao),
-  // exatamente como o card e o funil — assim a coluna "Ganhos" da matriz bate com
-  // os "Ganhos" do funil. Abertos e perdidos continuam pela DATA DE CRIAÇÃO (o
-  // perdido segue a mesma base dos "Motivos de Perda"). Como cada negócio cai em
-  // um único balde, a reconciliação (Leads = abertos+ganhos+perdidos) se mantém.
+  // Base do PERÍODO para o CRM (matriz + aba Negócios): os GANHOS entram pela DATA
+  // DO GANHO (dataAtualizacao), exatamente como o card e o funil — assim a coluna
+  // "Ganhos" da matriz e a lista de Negócios (filtro GANHO) batem com os "Ganhos"
+  // do funil, permitindo revisar QUEM comprou no período. Abertos e perdidos
+  // continuam pela DATA DE CRIAÇÃO (o perdido segue a base dos "Motivos de Perda").
+  // Como cada negócio cai em um único balde, a reconciliação (Leads = abertos +
+  // ganhos + perdidos) se mantém.
   const crmPeriodData = useMemo(() => {
     const eff = isUnit ? { ...filters, pipeline: unitPipeline } : filters;
     const isWon = (r) =>
@@ -387,6 +380,17 @@ export default function DashboardPage() {
     );
     return [...restante, ...ganhos];
   }, [scopedData, filters, isUnit, unitPipeline]);
+
+  // Lista unificada da aba Negócios: DEALS + leads exclusivos do SDR (sem duplicar).
+  // Usa crmPeriodData (ganhos pela data do ganho) para que, ao filtrar por GANHO no
+  // período, apareçam exatamente os negócios fechados ali — igual ao funil/CRM.
+  // Ao isolar uma loja específica, NÃO inclui leads "Apenas no SDR IA" (que não têm
+  // pipeline) — eles só aparecem quando o filtro está em "Todas as Lojas".
+  const negociosList = useMemo(() => {
+    const sdrSource =
+      filters.pipeline === PIPELINE_ALL ? filteredLeadsSdr : [];
+    return buildUnifiedContacts(crmPeriodData, sdrSource);
+  }, [crmPeriodData, filteredLeadsSdr, filters.pipeline]);
 
   // Matriz analítica da aba Relatórios (funil + higiene por unidade).
   const storeReport = useMemo(
