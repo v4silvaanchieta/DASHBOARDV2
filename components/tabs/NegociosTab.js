@@ -65,12 +65,25 @@ function matchesStage(row, value) {
  * Aba "Negócios" — lista unificada (CRM + leads exclusivos do SDR IA).
  * Colunas: Data | Lead/Deal | Telefone (wa.me) | Estágio | Pipeline | Valor.
  *
- * @param {{ data: Array<Record<string, any>> }} props
+ * @param {{
+ *   data: Array<Record<string, any>>,
+ *   canExclude?: boolean,
+ *   excludedRows?: Array<Record<string, any>>,
+ *   getExcludeKey?: (row: Record<string, any>) => string,
+ *   onToggleExclude?: (key: string) => void,
+ * }} props
  */
-export default function NegociosTab({ data }) {
+export default function NegociosTab({
+  data,
+  canExclude = false,
+  excludedRows = [],
+  getExcludeKey = () => "",
+  onToggleExclude = () => {},
+}) {
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState("todos");
+  const [showExcluded, setShowExcluded] = useState(false);
 
   // Filtro combinado: estágio + busca por nome (Lead/Deal ou contato).
   const filtered = useMemo(() => {
@@ -134,6 +147,55 @@ export default function NegociosTab({ data }) {
         </div>
       </div>
 
+      {/* Painel de negócios EXCLUÍDOS (admin) — contador + restaurar. */}
+      {canExclude && excludedRows.length > 0 && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50/60 p-3 dark:border-red-500/30 dark:bg-red-500/10">
+          <button
+            type="button"
+            onClick={() => setShowExcluded((v) => !v)}
+            className="flex w-full items-center justify-between text-left text-xs font-semibold text-red-700 dark:text-red-400"
+          >
+            <span>
+              🗑 {excludedRows.length}{" "}
+              {excludedRows.length === 1 ? "negócio excluído" : "negócios excluídos"} dos
+              cálculos
+            </span>
+            <span className="text-red-500 dark:text-red-400">
+              {showExcluded ? "ocultar ▲" : "ver / restaurar ▼"}
+            </span>
+          </button>
+          {showExcluded && (
+            <ul className="mt-2 space-y-1">
+              {excludedRows.map((row, i) => (
+                <li
+                  key={`${getExcludeKey(row)}-${i}`}
+                  className="flex items-center justify-between gap-3 rounded-md bg-white px-2.5 py-1.5 text-xs dark:bg-slate-900"
+                >
+                  <span className="truncate text-slate-600 dark:text-slate-300">
+                    <b className="text-slate-800 dark:text-slate-100">
+                      {row.nomeDeal || row.nomeContato || "—"}
+                    </b>
+                    <span className="mx-1.5 text-slate-300 dark:text-slate-600">·</span>
+                    {row.pipeline || "—"}
+                    <span className="mx-1.5 text-slate-300 dark:text-slate-600">·</span>
+                    {row.dataCriacao || "—"}
+                    <span className="mx-1.5 text-slate-300 dark:text-slate-600">·</span>
+                    {formatBRL(Number(row.quantia) || 0)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onToggleExclude(getExcludeKey(row))}
+                    className="shrink-0 rounded-md border border-slate-300 px-2 py-0.5 font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    ↩ Restaurar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full min-w-[820px] text-left text-sm">
           <thead>
@@ -144,6 +206,7 @@ export default function NegociosTab({ data }) {
               <th className="py-2 pr-4 font-semibold">Estágio Atual</th>
               <th className="py-2 pr-4 font-semibold">Pipeline</th>
               <th className="py-2 text-right font-semibold">Valor</th>
+              {canExclude && <th className="py-2 pl-4 text-right font-semibold">Ação</th>}
             </tr>
           </thead>
           <tbody>
@@ -192,13 +255,29 @@ export default function NegociosTab({ data }) {
                   <td className="py-2.5 text-right tabular-nums text-slate-700 dark:text-slate-300">
                     {formatBRL(Number(row.quantia) || 0)}
                   </td>
+                  {canExclude && (
+                    <td className="py-2.5 pl-4 text-right">
+                      {row.sdrOnly ? (
+                        <span className="text-slate-300 dark:text-slate-600">—</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onToggleExclude(getExcludeKey(row))}
+                          title="Excluir este negócio de todos os cálculos (ex.: lead de teste)"
+                          className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+                        >
+                          ✕ Excluir
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}
             {pageRows.length === 0 && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={canExclude ? 7 : 6}
                   className="py-10 text-center text-slate-400 dark:text-slate-500"
                 >
                   Nenhum contato para os filtros/busca atuais.

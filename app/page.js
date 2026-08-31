@@ -70,6 +70,20 @@ const TAB_LABELS = {
   config: "Configurações",
 };
 
+/**
+ * Chave única de um negócio para a lista de exclusão (leads de teste etc.).
+ * Usa o DEAL ID; sem ele, cai para NOME + DATA DE CRIAÇÃO.
+ */
+function excludeKey(row) {
+  const id = String(row?.dealId ?? "").trim();
+  if (id) return id;
+  return `${String(row?.nomeDeal ?? row?.nomeContato ?? "").trim()}|${String(
+    row?.dataCriacao ?? row?.data ?? ""
+  ).trim()}`;
+}
+
+const EXCLUDED_STORAGE_KEY = "velot-excluded-deals";
+
 export default function DashboardPage() {
   const { data, leadsSdr, campaignsData, loading, error, lastUpdated } =
     useDashboardData();
@@ -115,6 +129,28 @@ export default function DashboardPage() {
     penalties: { ...SCORE_PENALTY },
   });
 
+  // LEADS EXCLUÍDOS pelo admin (ex.: leads de teste que contam como ganho).
+  // Persistido no navegador; filtra a BASE inteira (afeta todos os cálculos).
+  const [excluded, setExcluded] = useState(() => new Set());
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(EXCLUDED_STORAGE_KEY);
+      if (raw) setExcluded(new Set(JSON.parse(raw)));
+    } catch {}
+  }, []);
+  const toggleExclude = (key) => {
+    if (!key) return;
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      try {
+        localStorage.setItem(EXCLUDED_STORAGE_KEY, JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  };
+
   // Filtros globais (Etapa 2) — afetam o filteredData de TODAS as abas.
   const [filters, setFilters] = useState({
     dateRange: DATE_RANGE_DEFAULT,
@@ -124,16 +160,27 @@ export default function DashboardPage() {
     customEnd: "",
   });
 
+  // Base sem os leads EXCLUÍDOS (removidos de TODOS os cálculos do dashboard).
+  const baseData = useMemo(
+    () => (excluded.size ? data.filter((r) => !excluded.has(excludeKey(r))) : data),
+    [data, excluded]
+  );
+  // Negócios de teste que o admin marcou para excluir (para o painel de restaurar).
+  const excludedRows = useMemo(
+    () => (excluded.size ? data.filter((r) => excluded.has(excludeKey(r))) : []),
+    [data, excluded]
+  );
+
   // ISOLAMENTO NA RAIZ: para perfil "unit", retém APENAS registros da pipeline da
   // unidade logada antes de qualquer agregação (preserva toda a lógica downstream).
   const scopedData = useMemo(() => {
-    if (!isUnit) return data;
-    return data.filter((r) => String(r.pipeline ?? "").trim() === unitPipeline);
-  }, [data, isUnit, unitPipeline]);
+    if (!isUnit) return baseData;
+    return baseData.filter((r) => String(r.pipeline ?? "").trim() === unitPipeline);
+  }, [baseData, isUnit, unitPipeline]);
 
   const pipelineOptions = useMemo(
-    () => getUniqueValues(data, "pipeline"),
-    [data]
+    () => getUniqueValues(baseData, "pipeline"),
+    [baseData]
   );
   const sourceOptions = useMemo(
     () => getUniqueValues(scopedData, "utmSource"),
@@ -818,7 +865,15 @@ export default function DashboardPage() {
               )}
 
               {/* === NEGÓCIOS === */}
-              {activeTab === "negocios" && <NegociosTab data={negociosList} />}
+              {activeTab === "negocios" && (
+                <NegociosTab
+                  data={negociosList}
+                  canExclude={isAdmin}
+                  excludedRows={excludedRows}
+                  getExcludeKey={excludeKey}
+                  onToggleExclude={toggleExclude}
+                />
+              )}
 
               {/* === PRODUTOS === */}
               {activeTab === "produtos" && (
