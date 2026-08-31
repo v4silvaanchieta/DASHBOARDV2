@@ -26,6 +26,7 @@ import {
   getUniqueValues,
   passesDateFilter,
   previousPeriodFilters,
+  isV4Lead,
   DATE_RANGE_DEFAULT,
   PIPELINE_ALL,
   PIPELINE_FRONTLINE,
@@ -50,6 +51,7 @@ import {
   computeAiEfficiency,
 } from "@/lib/marketing";
 import { buildUnifiedContacts, phoneKey } from "@/lib/crossref";
+import { buildSalesWonDeals, pipelineCityKey } from "@/lib/vendas";
 import { computeProductRevenue } from "@/lib/products";
 import {
   campaignMatchesPipeline,
@@ -71,7 +73,7 @@ const TAB_LABELS = {
 };
 
 export default function DashboardPage() {
-  const { data, leadsSdr, campaignsData, loading, error, lastUpdated } =
+  const { data, leadsSdr, campaignsData, vendas, loading, error, lastUpdated } =
     useDashboardData();
 
   // RBAC / Data Siloing: perfil do usuário (admin vê tudo; unit vê só sua pipeline).
@@ -130,6 +132,16 @@ export default function DashboardPage() {
     if (!isUnit) return data;
     return data.filter((r) => String(r.pipeline ?? "").trim() === unitPipeline);
   }, [data, isUnit, unitPipeline]);
+
+  // RELATÓRIO DE VENDAS -> "ganhos sintéticos" (deduplicados contra o CRM). O
+  // índice de match usa `data` (CRM completo); o resultado é isolado por unidade
+  // (pela CIDADE da pipeline) para o perfil "unit".
+  const salesWon = useMemo(() => buildSalesWonDeals(vendas, data), [vendas, data]);
+  const scopedSalesWon = useMemo(() => {
+    if (!isUnit) return salesWon.deals;
+    const uc = pipelineCityKey(unitPipeline);
+    return salesWon.deals.filter((d) => pipelineCityKey(d.pipeline) === uc);
+  }, [salesWon, isUnit, unitPipeline]);
 
   const pipelineOptions = useMemo(
     () => getUniqueValues(data, "pipeline"),
@@ -318,36 +330,45 @@ export default function DashboardPage() {
   // um negócio criado em junho e ganho em julho conta como venda de JULHO. Por
   // isso o filtro de período aqui usa a coluna de atualização (dateField). Espelha
   // o isolamento de loja/unidade (RBAC) e o filtro de origem já embutidos em eff.
+  // Fonte unificada de GANHOS: ganhos do CRM + vendas do relatório (já dedupadas
+  // contra os ganhos do CRM em buildSalesWonDeals). Assim a quantidade e o valor
+  // de Ganhos refletem as vendas reais, com origem V4/desconhecida filtrável.
   const wonInPeriod = useMemo(() => {
     const eff = isUnit ? { ...filters, pipeline: unitPipeline } : filters;
     const ganhos = scopedData.filter(
       (r) => String(r.status ?? "").trim().toLowerCase() === "ganho"
     );
-    return applyFilters(ganhos, eff, "dataAtualizacao");
-  }, [scopedData, filters, isUnit, unitPipeline]);
+    return applyFilters([...ganhos, ...scopedSalesWon], eff, "dataAtualizacao");
+  }, [scopedData, scopedSalesWon, filters, isUnit, unitPipeline]);
 
-  const wonMetrics = useMemo(
-    () => ({
-      faturamento: wonInPeriod.reduce((s, r) => s + (Number(r.quantia) || 0), 0),
-      vendasRealizadas: wonInPeriod.length,
-    }),
+  const sumMetrics = (arr) => ({
+    faturamento: arr.reduce((s, r) => s + (Number(r.quantia) || 0), 0),
+    vendasRealizadas: arr.length,
+  });
+
+  const wonMetrics = useMemo(() => sumMetrics(wonInPeriod), [wonInPeriod]);
+  // Subconjunto V4-atribuível (para ROAS/CAC): só ganhos rastreáveis ao funil V4
+  // — walk-ins de origem desconhecida não creditam o gasto de anúncios.
+  const wonV4Metrics = useMemo(
+    () => sumMetrics(wonInPeriod.filter(isV4Lead)),
     [wonInPeriod]
   );
 
-  // Mesmo cálculo para o período anterior (comparação MoM dos cards financeiros).
-  const prevWonMetrics = useMemo(() => {
+  // Período anterior (comparação MoM). Guarda o array p/ derivar total e V4.
+  const prevWon = useMemo(() => {
     const pf = previousPeriodFilters(filters);
     if (!pf) return null;
     const eff = isUnit ? { ...pf, pipeline: unitPipeline } : pf;
     const ganhos = scopedData.filter(
       (r) => String(r.status ?? "").trim().toLowerCase() === "ganho"
     );
-    const won = applyFilters(ganhos, eff, "dataAtualizacao");
-    return {
-      faturamento: won.reduce((s, r) => s + (Number(r.quantia) || 0), 0),
-      vendasRealizadas: won.length,
-    };
-  }, [scopedData, filters, isUnit, unitPipeline]);
+    return applyFilters([...ganhos, ...scopedSalesWon], eff, "dataAtualizacao");
+  }, [scopedData, scopedSalesWon, filters, isUnit, unitPipeline]);
+  const prevWonMetrics = useMemo(() => (prevWon ? sumMetrics(prevWon) : null), [prevWon]);
+  const prevWonV4Metrics = useMemo(
+    () => (prevWon ? sumMetrics(prevWon.filter(isV4Lead)) : null),
+    [prevWon]
+  );
 
   // KPIs de tráfego pago (Marketing) — totais do período atual e anterior para
   // os cards macro do topo (conversas, CPA, CTR, investimento).
@@ -361,24 +382,24 @@ export default function DashboardPage() {
     [previousCampaignsData]
   );
 
-  // ROAS = Ganhos (Faturamento Realizado do CRM, pela DATA DO GANHO) / Investimento
-  // (Spend). Período anterior idem, quando há comparação e investimento > 0.
+  // ROAS = Faturamento V4-atribuível / Investimento (Spend). Usa só ganhos
+  // rastreáveis ao V4 (não infla com vendas walk-in de origem desconhecida).
   const roas =
-    campaignTotals.spend > 0 ? wonMetrics.faturamento / campaignTotals.spend : 0;
+    campaignTotals.spend > 0 ? wonV4Metrics.faturamento / campaignTotals.spend : 0;
   const prevRoas =
-    prevWonMetrics && prevCampaignTotals && prevCampaignTotals.spend > 0
-      ? prevWonMetrics.faturamento / prevCampaignTotals.spend
+    prevWonV4Metrics && prevCampaignTotals && prevCampaignTotals.spend > 0
+      ? prevWonV4Metrics.faturamento / prevCampaignTotals.spend
       : null;
 
-  // CAC = Investimento (Spend) / vendas ganhas no período (pela DATA DO GANHO).
-  // Custo por cliente — quanto MENOR, melhor. Período anterior idem, quando há vendas.
+  // CAC = Investimento (Spend) / vendas V4-atribuíveis. Custo por cliente V4 —
+  // quanto MENOR, melhor. Período anterior idem, quando há vendas.
   const cac =
-    wonMetrics.vendasRealizadas > 0
-      ? campaignTotals.spend / wonMetrics.vendasRealizadas
+    wonV4Metrics.vendasRealizadas > 0
+      ? campaignTotals.spend / wonV4Metrics.vendasRealizadas
       : 0;
   const prevCac =
-    prevWonMetrics && prevCampaignTotals && prevWonMetrics.vendasRealizadas > 0
-      ? prevCampaignTotals.spend / prevWonMetrics.vendasRealizadas
+    prevWonV4Metrics && prevCampaignTotals && prevWonV4Metrics.vendasRealizadas > 0
+      ? prevCampaignTotals.spend / prevWonV4Metrics.vendasRealizadas
       : null;
 
   const hygieneRows = useMemo(
@@ -409,8 +430,9 @@ export default function DashboardPage() {
     const eff = isUnit ? { ...filters, pipeline: unitPipeline } : filters;
     const isWon = (r) =>
       String(r.status ?? "").trim().toLowerCase() === "ganho";
+    // Ganhos = ganhos do CRM + vendas do relatório (dedupadas), pela data do ganho.
     const ganhos = applyFilters(
-      scopedData.filter(isWon),
+      [...scopedData.filter(isWon), ...scopedSalesWon],
       eff,
       "dataAtualizacao"
     );
@@ -420,7 +442,7 @@ export default function DashboardPage() {
       "dataCriacao"
     );
     return [...restante, ...ganhos];
-  }, [scopedData, filters, isUnit, unitPipeline]);
+  }, [scopedData, scopedSalesWon, filters, isUnit, unitPipeline]);
 
   // Lista unificada da aba Negócios: DEALS + leads exclusivos do SDR (sem duplicar).
   // Usa crmPeriodData (ganhos pela data do ganho) para que, ao filtrar por GANHO no
@@ -721,20 +743,16 @@ export default function DashboardPage() {
                     />
                     <KpiCard
                       label="Ganhos"
-                      value={formatBRL(wonMetrics.faturamento)}
+                      // Número grande = QUANTIDADE de vendas ganhas (CRM + relatório
+                      // de vendas, dedupado); valor total R$ menor abaixo (hint).
+                      value={fmtCount(wonMetrics.vendasRealizadas)}
                       icon="💰"
                       accent="emerald"
                       delta={makeDelta(
-                        wonMetrics.faturamento,
-                        prevWonMetrics?.faturamento
+                        wonMetrics.vendasRealizadas,
+                        prevWonMetrics?.vendasRealizadas
                       )}
-                      // Vendas GANHAS no período pela DATA DO GANHO (DATA
-                      // ATUALIZAÇÃO), não pela criação: um negócio fechado agora
-                      // conta agora, mesmo que o lead tenha entrado antes. Hint
-                      // mostra a contagem (o valor R$ às vezes falta na planilha).
-                      hint={`${fmtCount(wonMetrics.vendasRealizadas)} ${
-                        wonMetrics.vendasRealizadas === 1 ? "venda ganha" : "vendas ganhas"
-                      }`}
+                      hint={`${formatBRL(wonMetrics.faturamento)} em vendas`}
                       onNavigate={isAdmin ? () => setActiveTab("produtos") : undefined}
                     />
                     <KpiCard
@@ -755,6 +773,31 @@ export default function DashboardPage() {
                       hint={prevHint(prevRoas, (v) => `${v.toFixed(2).replace(".", ",")}x`)}
                     />
                   </div>
+
+                  {/* TRANSPARÊNCIA — o que foi integrado do Relatório de Vendas
+                      (traz confiança aos números de Ganhos). Totais da rede. */}
+                  {salesWon.stats.total > 0 && (
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                      <span className="font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                        📋 Relatório de Vendas integrado
+                      </span>
+                      <span>
+                        <b className="text-slate-700 dark:text-slate-200">{fmtCount(salesWon.stats.total)}</b> vendas
+                      </span>
+                      <span className="text-emerald-600 dark:text-emerald-400">
+                        <b>{fmtCount(salesWon.stats.v4 + salesWon.stats.dedup)}</b> V4 (match no CRM)
+                      </span>
+                      <span className="text-amber-600 dark:text-amber-400">
+                        <b>{fmtCount(salesWon.stats.desconhecida)}</b> origem desconhecida
+                      </span>
+                      <span>
+                        <b className="text-slate-700 dark:text-slate-200">{fmtCount(salesWon.stats.dedup)}</b> já eram Ganho no CRM (não somam)
+                      </span>
+                      <span className="text-slate-400 dark:text-slate-500">
+                        match por CPF · telefone · nome (1º+último único)
+                      </span>
+                    </div>
+                  )}
 
                   {/* BLOCO PRINCIPAL — Racional (55%) / Emocional (45%).
                       Cada coluna empilha de forma INDEPENDENTE (items-start): a
@@ -838,7 +881,7 @@ export default function DashboardPage() {
                     campaigns={campaigns}
                     aiEfficiency={aiEfficiency}
                     leadsCount={metrics.leadsGerados}
-                    revenue={wonMetrics.faturamento}
+                    revenue={wonV4Metrics.faturamento}
                     spend={campaignSpend}
                     paidCampaignsCount={filteredCampaignsData.length}
                   />
