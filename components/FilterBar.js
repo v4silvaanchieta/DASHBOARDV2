@@ -6,7 +6,6 @@ import {
   PIPELINE_FRONTLINE,
   SOURCE_ALL,
   SOURCE_V4,
-  SOURCE_UNKNOWN,
 } from "@/lib/filters";
 
 /**
@@ -103,7 +102,6 @@ export default function FilterBar({
           >
             <option value={SOURCE_ALL}>Todas as Origens</option>
             <option value={SOURCE_V4}>Chamada V4 (WhatsApp / tag V4)</option>
-            <option value={SOURCE_UNKNOWN}>Origem desconhecida (venda sem match)</option>
             {sourceOptions.map((opt) => (
               <option key={opt} value={opt}>
                 {opt}
