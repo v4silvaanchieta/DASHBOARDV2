@@ -83,6 +83,7 @@ function excludeKey(row) {
 }
 
 const EXCLUDED_STORAGE_KEY = "velot-excluded-deals";
+const WINDATE_STORAGE_KEY = "velot-windate-overrides";
 
 export default function DashboardPage() {
   const { data, leadsSdr, campaignsData, loading, error, lastUpdated } =
@@ -151,6 +152,30 @@ export default function DashboardPage() {
     });
   };
 
+  // DATA DO GANHO editável: negócios fechados em um mês mas marcados "Ganho" só
+  // depois ficam com a DATA ATUALIZAÇÃO errada. O admin corrige a data real de
+  // fechamento aqui; a sobrescrita (por negócio, "YYYY-MM-DD") vale em TODO o
+  // dashboard (Ganhos contam pela data do ganho). Persistido no navegador.
+  const [winDates, setWinDates] = useState({});
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(WINDATE_STORAGE_KEY);
+      if (raw) setWinDates(JSON.parse(raw) || {});
+    } catch {}
+  }, []);
+  const setWinDate = (key, ymd) => {
+    if (!key) return;
+    setWinDates((prev) => {
+      const next = { ...prev };
+      if (ymd) next[key] = ymd;
+      else delete next[key];
+      try {
+        localStorage.setItem(WINDATE_STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
   // Filtros globais (Etapa 2) — afetam o filteredData de TODAS as abas.
   const [filters, setFilters] = useState({
     dateRange: DATE_RANGE_DEFAULT,
@@ -160,11 +185,23 @@ export default function DashboardPage() {
     customEnd: "",
   });
 
-  // Base sem os leads EXCLUÍDOS (removidos de TODOS os cálculos do dashboard).
-  const baseData = useMemo(
-    () => (excluded.size ? data.filter((r) => !excluded.has(excludeKey(r))) : data),
-    [data, excluded]
-  );
+  // Base do dashboard: (1) remove os leads EXCLUÍDOS e (2) aplica a DATA DO GANHO
+  // corrigida pelo admin (sobrescreve dataAtualizacao dos ganhos com override).
+  const baseData = useMemo(() => {
+    let rows = excluded.size
+      ? data.filter((r) => !excluded.has(excludeKey(r)))
+      : data;
+    if (Object.keys(winDates).length > 0) {
+      rows = rows.map((r) => {
+        const ov = winDates[excludeKey(r)];
+        if (ov && String(r.status ?? "").trim().toLowerCase() === "ganho") {
+          return { ...r, dataAtualizacao: ov, winDateEdited: true };
+        }
+        return r;
+      });
+    }
+    return rows;
+  }, [data, excluded, winDates]);
   // Negócios de teste que o admin marcou para excluir (para o painel de restaurar).
   const excludedRows = useMemo(
     () => (excluded.size ? data.filter((r) => excluded.has(excludeKey(r))) : []),
@@ -872,6 +909,8 @@ export default function DashboardPage() {
                   excludedRows={excludedRows}
                   getExcludeKey={excludeKey}
                   onToggleExclude={toggleExclude}
+                  winDates={winDates}
+                  onSetWinDate={setWinDate}
                 />
               )}
 

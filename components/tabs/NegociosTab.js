@@ -34,6 +34,22 @@ function normTxt(value) {
     .replace(/\p{Diacritic}/gu, "");
 }
 
+/** Converte "DD/MM/YYYY [HH:MM]" ou "YYYY-MM-DD" para "YYYY-MM-DD" (input date). */
+function toInputDate(str) {
+  const s = String(str ?? "").trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  return "";
+}
+
+/** "YYYY-MM-DD" -> "DD/MM/YYYY" para exibição. */
+function fromInputDate(ymd) {
+  const m = String(ymd ?? "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(ymd ?? "");
+}
+
 /** true se a linha corresponde ao estágio selecionado. */
 function matchesStage(row, value) {
   if (value === "todos") return true;
@@ -79,6 +95,8 @@ export default function NegociosTab({
   excludedRows = [],
   getExcludeKey = () => "",
   onToggleExclude = () => {},
+  winDates = {},
+  onSetWinDate = () => {},
 }) {
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
@@ -118,6 +136,12 @@ export default function NegociosTab({
             {filtered.length.toLocaleString("pt-BR")} contatos (CRM + SDR IA) · período
             filtrado
           </p>
+          {canExclude && (
+            <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
+              Nos negócios <b>Ganhos</b>, a coluna Data mostra a <b>data do ganho</b> —
+              edite-a para a data real de fechamento e o dashboard recalcula no mês certo.
+            </p>
+          )}
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <select
@@ -213,13 +237,53 @@ export default function NegociosTab({
             {pageRows.map((row, i) => {
               const link = waLink(row);
               const phone = String(row.telefone || row.cfTelefone || "").trim();
+              const isGanho = normTxt(row.status) === "ganho";
+              const key = getExcludeKey(row);
+              const edited = Boolean(winDates[key]);
+              // Para GANHOS mostra a DATA DO GANHO (dataAtualizacao / override);
+              // demais, a data de criação.
+              const ganhoYmd = toInputDate(
+                winDates[key] || row.dataAtualizacao || row.dataCriacao
+              );
               return (
                 <tr
                   key={`${row.dealId || row.telefone || "row"}-${i}`}
                   className="border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
                 >
                   <td className="py-2.5 pr-4 whitespace-nowrap text-slate-600 dark:text-slate-400">
-                    {row.dataCriacao || "—"}
+                    {isGanho && !row.sdrOnly ? (
+                      canExclude ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <input
+                            type="date"
+                            value={ganhoYmd}
+                            onChange={(e) => onSetWinDate(key, e.target.value)}
+                            title="Data real do fechamento (Ganho). Recalcula o dashboard no mês certo."
+                            className={`rounded-md border bg-white px-2 py-1 text-xs text-slate-700 shadow-sm focus:border-velot focus:outline-none focus:ring-1 focus:ring-velot dark:bg-slate-800 dark:text-slate-100 ${
+                              edited
+                                ? "border-emerald-400 dark:border-emerald-500/60"
+                                : "border-slate-300 dark:border-slate-700"
+                            }`}
+                          />
+                          {edited && (
+                            <button
+                              type="button"
+                              onClick={() => onSetWinDate(key, "")}
+                              title="Voltar à data original do CRM"
+                              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                            >
+                              ↺
+                            </button>
+                          )}
+                        </span>
+                      ) : (
+                        <span title="Data do ganho">
+                          {ganhoYmd ? fromInputDate(ganhoYmd) : row.dataCriacao || "—"}
+                        </span>
+                      )
+                    ) : (
+                      row.dataCriacao || "—"
+                    )}
                   </td>
                   <td className="py-2.5 pr-4 font-medium text-slate-800 dark:text-slate-100">
                     {row.nomeDeal || row.nomeContato || "—"}
