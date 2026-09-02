@@ -38,6 +38,15 @@ service cloud.firestore {
             && request.resource.data.pipeline == resource.data.pipeline);
     }
 
+    // Coleção `config`: overrides COMPARTILHADOS do dashboard (doc `overrides`
+    // com winDates = data real do ganho e excluded = negócios removidos).
+    //  - LEITURA: qualquer usuário autenticado (todos os perfis veem o mesmo);
+    //  - ESCRITA: exclusiva de administradores.
+    match /config/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // Demais coleções: negadas por padrão (segurança por omissão).
     match /{document=**} {
       allow read, write: if false;

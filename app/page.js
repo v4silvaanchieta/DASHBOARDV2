@@ -50,6 +50,7 @@ import {
   computeAiEfficiency,
 } from "@/lib/marketing";
 import { buildUnifiedContacts, phoneKey } from "@/lib/crossref";
+import { useOverrides } from "@/lib/overrides";
 import { computeProductRevenue } from "@/lib/products";
 import {
   campaignMatchesPipeline,
@@ -82,8 +83,6 @@ function excludeKey(row) {
   ).trim()}`;
 }
 
-const EXCLUDED_STORAGE_KEY = "velot-excluded-deals";
-const WINDATE_STORAGE_KEY = "velot-windate-overrides";
 
 export default function DashboardPage() {
   const { data, leadsSdr, campaignsData, loading, error, lastUpdated } =
@@ -130,51 +129,21 @@ export default function DashboardPage() {
     penalties: { ...SCORE_PENALTY },
   });
 
-  // LEADS EXCLUÍDOS pelo admin (ex.: leads de teste que contam como ganho).
-  // Persistido no navegador; filtra a BASE inteira (afeta todos os cálculos).
-  const [excluded, setExcluded] = useState(() => new Set());
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(EXCLUDED_STORAGE_KEY);
-      if (raw) setExcluded(new Set(JSON.parse(raw)));
-    } catch {}
-  }, []);
-  const toggleExclude = (key) => {
-    if (!key) return;
-    setExcluded((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      try {
-        localStorage.setItem(EXCLUDED_STORAGE_KEY, JSON.stringify([...next]));
-      } catch {}
-      return next;
-    });
-  };
-
-  // DATA DO GANHO editável: negócios fechados em um mês mas marcados "Ganho" só
-  // depois ficam com a DATA ATUALIZAÇÃO errada. O admin corrige a data real de
-  // fechamento aqui; a sobrescrita (por negócio, "YYYY-MM-DD") vale em TODO o
-  // dashboard (Ganhos contam pela data do ganho). Persistido no navegador.
-  const [winDates, setWinDates] = useState({});
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(WINDATE_STORAGE_KEY);
-      if (raw) setWinDates(JSON.parse(raw) || {});
-    } catch {}
-  }, []);
-  const setWinDate = (key, ymd) => {
-    if (!key) return;
-    setWinDates((prev) => {
-      const next = { ...prev };
-      if (ymd) next[key] = ymd;
-      else delete next[key];
-      try {
-        localStorage.setItem(WINDATE_STORAGE_KEY, JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-  };
+  // OVERRIDES COMPARTILHADOS entre TODOS os perfis (Firestore, em tempo real):
+  //  - excluded: negócios removidos de TODOS os cálculos (ex.: leads de teste);
+  //  - winDates: data real do ganho (fechamento) que sobrescreve dataAtualizacao.
+  // Editar em um perfil reflete nos demais (não é mais por navegador).
+  const {
+    winDates,
+    excluded: excludedMap,
+    setWinDate,
+    toggleExclude,
+  } = useOverrides();
+  // Set das chaves excluídas (mantém a API .size/.has usada abaixo).
+  const excluded = useMemo(
+    () => new Set(Object.keys(excludedMap || {})),
+    [excludedMap]
+  );
 
   // Filtros globais (Etapa 2) — afetam o filteredData de TODAS as abas.
   const [filters, setFilters] = useState({
