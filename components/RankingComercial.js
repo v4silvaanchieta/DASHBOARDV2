@@ -10,9 +10,7 @@ const COLS = [
   { key: "elegiveis", label: "Elegíveis" },
   { key: "propostas", label: "Propostas" },
   { key: "vendas", label: "Vendas" },
-  { key: "pElegiveis", label: "% Eleg.", rate: true },
-  { key: "pPropostas", label: "% Prop.", rate: true },
-  { key: "fechamento", label: "Fechamento", rate: true },
+  { key: "fechamento", label: "Fech.", rate: true },
 ];
 
 /**
@@ -56,7 +54,7 @@ export default function RankingComercial({ stores = [], metas = {} }) {
         </div>
       ) : (
         <div className="max-h-[420px] overflow-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
+          <table className="w-full min-w-[480px] text-left text-sm">
             <thead className="sticky top-0 bg-white dark:bg-slate-900">
               <tr className="border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:text-slate-400">
                 <th className="py-2 pr-3 font-semibold">Loja</th>
@@ -108,12 +106,6 @@ export default function RankingComercial({ stores = [], metas = {} }) {
                 <td className="py-2 px-2 text-right tabular-nums">{int(total.elegiveis)}</td>
                 <td className="py-2 px-2 text-right tabular-nums">{int(total.propostas)}</td>
                 <td className="py-2 px-2 text-right tabular-nums">{int(total.vendas)}</td>
-                <td className="py-2 px-2 text-right tabular-nums">
-                  {pct(total.consultas ? total.elegiveis / total.consultas : 0)}
-                </td>
-                <td className="py-2 px-2 text-right tabular-nums">
-                  {pct(total.elegiveis ? total.propostas / total.elegiveis : 0)}
-                </td>
                 <td className="py-2 px-2 text-right tabular-nums">
                   {pct(total.consultas ? total.vendas / total.consultas : 0)}
                 </td>

@@ -10,6 +10,7 @@ import LossReasons from "@/components/LossReasons";
 import CampaignBreakdown from "@/components/CampaignBreakdown";
 import ComercialFunnel from "@/components/ComercialFunnel";
 import RankingComercial from "@/components/RankingComercial";
+import ViewTabs from "@/components/ViewTabs";
 import CrmMatrix from "@/components/CrmMatrix";
 import TrendCharts from "@/components/TrendCharts";
 import StoreHygieneTable from "@/components/StoreHygieneTable";
@@ -100,6 +101,9 @@ export default function DashboardPage() {
 
   // Navegação por abas (React Tabs) — mantém dados em memória + polling ativo.
   const [activeTab, setActiveTab] = useState("visao-geral");
+  // Alternância de visão (mesma posição): funil Marketing↔Comercial e CRM↔Ranking.
+  const [funnelView, setFunnelView] = useState("marketing");
+  const [crmView, setCrmView] = useState("crm");
 
   // Tema claro/escuro (apenas layout — não afeta dados/cálculos).
   const [theme, setTheme] = useState("light");
@@ -825,67 +829,90 @@ export default function DashboardPage() {
                       coluna da direita "sobe" e preenche o espaço, sem vão entre
                       Motivos de Perda e Tendências. */}
                   <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[55fr_45fr]">
-                    {/* Coluna Esquerda — Racional (55%): Campanhas → CRM */}
+                    {/* Coluna Esquerda (55%): Campanhas → CRM/Ranking (mesma posição,
+                        alternável). */}
                     <div className="space-y-6">
                       <CampaignBreakdown
                         campaigns={filteredCampaignsData}
                         onNavigate={isAdmin ? () => setActiveTab("campanhas") : undefined}
                       />
-                      <CrmMatrix
-                        rows={storeReport}
-                        title="Visualização do CRM"
-                        onNavigate={isAdmin ? () => setActiveTab("relatorios") : undefined}
-                      />
+                      <div className="space-y-2">
+                        <div className="flex justify-end">
+                          <ViewTabs
+                            value={crmView}
+                            onChange={setCrmView}
+                            options={[
+                              { value: "crm", label: "CRM" },
+                              { value: "comercial", label: "Ranking Comercial" },
+                            ]}
+                          />
+                        </div>
+                        {crmView === "crm" ? (
+                          <CrmMatrix
+                            rows={storeReport}
+                            title="Visualização do CRM"
+                            onNavigate={isAdmin ? () => setActiveTab("relatorios") : undefined}
+                          />
+                        ) : (
+                          <RankingComercial
+                            stores={comercial.stores}
+                            metas={comercial.metas}
+                          />
+                        )}
+                      </div>
                     </div>
 
-                    {/* Coluna Direita — Emocional (45%): Funil → Motivos → Tendências.
-                        TrendCharts usa dados brutos isolados por unidade, ignorando
-                        o filtro de data global. */}
+                    {/* Coluna Direita (45%): Funil (Marketing/Comercial alternável) →
+                        Motivos → Tendências. */}
                     <div className="space-y-6">
-                      <ConversionFunnel
-                        stages={[
-                          {
-                            label: "Conversas Iniciadas",
-                            value: campaignTotals.conversations,
-                            color: "#c4b5fd",
-                            captureLabel: "Captura",
-                          },
-                          {
-                            label: "Chegou na Inteligência Artificial",
-                            value: filteredLeadsSdr.length,
-                            color: "#93c5fd",
-                            captureLabel: "Qualif",
-                          },
-                          {
-                            label: "Qualificados p/ CRM",
-                            value: metrics.leadsUnicos,
-                            color: "#5eead4",
-                            captureLabel: "Fecham",
-                          },
-                          {
-                            // Ganhos pela DATA DO GANHO (consistente com o card).
-                            label: "Ganhos",
-                            value: wonMetrics.vendasRealizadas,
-                            color: "#6ee7b7",
-                          },
-                        ]}
-                      />
-
-                      {/* Divisória Marketing | Comercial — os funis NÃO se encadeiam
-                          (o comercial consulta TODAS as origens, não só o tráfego). */}
-                      <div className="flex items-center gap-3 px-1">
-                        <span className="h-px flex-1 border-t border-dashed border-slate-300 dark:border-slate-700" />
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                          Marketing (V4) · Comercial (Loja)
-                        </span>
-                        <span className="h-px flex-1 border-t border-dashed border-slate-300 dark:border-slate-700" />
+                      <div className="space-y-2">
+                        <div className="flex justify-end">
+                          <ViewTabs
+                            value={funnelView}
+                            onChange={setFunnelView}
+                            options={[
+                              { value: "marketing", label: "Marketing" },
+                              { value: "comercial", label: "Comercial" },
+                            ]}
+                          />
+                        </div>
+                        {funnelView === "marketing" ? (
+                          <ConversionFunnel
+                            stages={[
+                              {
+                                label: "Conversas Iniciadas",
+                                value: campaignTotals.conversations,
+                                color: "#c4b5fd",
+                                captureLabel: "Captura",
+                              },
+                              {
+                                label: "Chegou na Inteligência Artificial",
+                                value: filteredLeadsSdr.length,
+                                color: "#93c5fd",
+                                captureLabel: "Qualif",
+                              },
+                              {
+                                label: "Qualificados p/ CRM",
+                                value: metrics.leadsUnicos,
+                                color: "#5eead4",
+                                captureLabel: "Fecham",
+                              },
+                              {
+                                // Ganhos pela DATA DO GANHO (consistente com o card).
+                                label: "Ganhos",
+                                value: wonMetrics.vendasRealizadas,
+                                color: "#6ee7b7",
+                              },
+                            ]}
+                          />
+                        ) : (
+                          <ComercialFunnel
+                            funnel={comercial.funnel}
+                            metas={comercial.metas}
+                            scopeName={scoreScopeName}
+                          />
+                        )}
                       </div>
-
-                      <ComercialFunnel
-                        funnel={comercial.funnel}
-                        metas={comercial.metas}
-                        scopeName={scoreScopeName}
-                      />
                       <LossReasons analysis={lossAnalysis} />
                       <TrendCharts
                         crmData={trendCrmData}
@@ -894,12 +921,6 @@ export default function DashboardPage() {
                       />
                     </div>
                   </div>
-
-                  {/* RANKING COMERCIAL — lojas comparadas nas etapas comerciais. */}
-                  <RankingComercial
-                    stores={comercial.stores}
-                    metas={comercial.metas}
-                  />
                 </>
               )}
 
