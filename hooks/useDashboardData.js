@@ -27,6 +27,9 @@ export function useDashboardData() {
   const [leadsSdr, setLeadsSdr] = useState([]);
   const [movimentacao, setMovimentacao] = useState([]);
   const [campaignsData, setCampaignsData] = useState([]);
+  const [menu, setMenu] = useState([]);
+  const [vendas, setVendas] = useState([]);
+  const [funilDiario, setFunilDiario] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -41,12 +44,15 @@ export function useDashboardData() {
       if (isFirstLoadRef.current) setLoading(true);
 
       fetchAllSources()
-        .then(({ deals, movimentacao: mov, leadsSdr: sdr, campanhas }) => {
+        .then(({ deals, movimentacao: mov, leadsSdr: sdr, campanhas, menu: mn, vendas: vd, funilDiario: fd }) => {
           if (!isMountedRef.current) return;
           setData(deals);
           setMovimentacao(mov);
           setLeadsSdr(sdr);
           setCampaignsData(campanhas);
+          setMenu(mn);
+          setVendas(vd);
+          setFunilDiario(fd);
           setError(null);
           setLastUpdated(new Date());
         })
@@ -71,7 +77,7 @@ export function useDashboardData() {
     };
   }, []);
 
-  return { data, leadsSdr, movimentacao, campaignsData, loading, error, lastUpdated };
+  return { data, leadsSdr, movimentacao, campaignsData, menu, vendas, funilDiario, loading, error, lastUpdated };
 }
 
 export default useDashboardData;

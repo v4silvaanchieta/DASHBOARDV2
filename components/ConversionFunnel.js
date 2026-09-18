@@ -22,9 +22,12 @@ export default function ConversionFunnel({ stages }) {
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
-      <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-        Funil Comercial
+      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-indigo-500 dark:text-indigo-400">
+        Funil de Marketing <span className="text-slate-400 dark:text-slate-500">· V4</span>
       </h3>
+      <p className="mb-4 text-[11px] text-slate-400 dark:text-slate-500">
+        Da conversa ao ganho gerado pelo tráfego (responsabilidade do marketing).
+      </p>
 
       <div>
         {stages.map((s, i) => {

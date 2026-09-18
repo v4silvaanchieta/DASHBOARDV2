@@ -8,6 +8,8 @@ import KpiCard from "@/components/KpiCard";
 import ConversionFunnel from "@/components/ConversionFunnel";
 import LossReasons from "@/components/LossReasons";
 import CampaignBreakdown from "@/components/CampaignBreakdown";
+import ComercialFunnel from "@/components/ComercialFunnel";
+import RankingComercial from "@/components/RankingComercial";
 import CrmMatrix from "@/components/CrmMatrix";
 import TrendCharts from "@/components/TrendCharts";
 import StoreHygieneTable from "@/components/StoreHygieneTable";
@@ -50,6 +52,7 @@ import {
   computeAiEfficiency,
 } from "@/lib/marketing";
 import { buildUnifiedContacts, phoneKey } from "@/lib/crossref";
+import { buildMenuMap, computeComercial } from "@/lib/comercial";
 import { useOverrides } from "@/lib/overrides";
 import { computeProductRevenue } from "@/lib/products";
 import {
@@ -85,7 +88,7 @@ function excludeKey(row) {
 
 
 export default function DashboardPage() {
-  const { data, leadsSdr, campaignsData, loading, error, lastUpdated } =
+  const { data, leadsSdr, campaignsData, menu, funilDiario, loading, error, lastUpdated } =
     useDashboardData();
 
   // RBAC / Data Siloing: perfil do usuário (admin vê tudo; unit vê só sua pipeline).
@@ -492,6 +495,14 @@ export default function DashboardPage() {
     [crmPeriodData, settings.penalties]
   );
 
+  // FUNIL COMERCIAL (aba Funil Diário) — responsabilidade da LOJA. De-para do MENU
+  // (vendedor -> loja), respeita filtro de data e de loja (RBAC via unitPipeline).
+  const menuMap = useMemo(() => buildMenuMap(menu), [menu]);
+  const comercial = useMemo(() => {
+    const eff = isUnit ? { ...filters, pipeline: unitPipeline } : filters;
+    return computeComercial(funilDiario, menuMap, eff);
+  }, [funilDiario, menuMap, filters, isUnit, unitPipeline]);
+
   // Resumo executivo da aba Relatórios. Usa a MESMA base do menu principal:
   // leads ÚNICOS do CRM (deduplicados por contato) sobre o filteredData já
   // enjaulado na pipeline da unidade e filtrado por data. Assim o número bate
@@ -859,6 +870,22 @@ export default function DashboardPage() {
                           },
                         ]}
                       />
+
+                      {/* Divisória Marketing | Comercial — os funis NÃO se encadeiam
+                          (o comercial consulta TODAS as origens, não só o tráfego). */}
+                      <div className="flex items-center gap-3 px-1">
+                        <span className="h-px flex-1 border-t border-dashed border-slate-300 dark:border-slate-700" />
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                          Marketing (V4) · Comercial (Loja)
+                        </span>
+                        <span className="h-px flex-1 border-t border-dashed border-slate-300 dark:border-slate-700" />
+                      </div>
+
+                      <ComercialFunnel
+                        funnel={comercial.funnel}
+                        metas={comercial.metas}
+                        scopeName={scoreScopeName}
+                      />
                       <LossReasons analysis={lossAnalysis} />
                       <TrendCharts
                         crmData={trendCrmData}
@@ -867,6 +894,12 @@ export default function DashboardPage() {
                       />
                     </div>
                   </div>
+
+                  {/* RANKING COMERCIAL — lojas comparadas nas etapas comerciais. */}
+                  <RankingComercial
+                    stores={comercial.stores}
+                    metas={comercial.metas}
+                  />
                 </>
               )}
 
