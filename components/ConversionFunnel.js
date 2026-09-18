@@ -43,15 +43,30 @@ export default function ConversionFunnel({ stages }) {
           return (
             <div key={s.label}>
               <div
-                className="flex min-h-[72px] items-center justify-center px-8 text-center"
+                role={s.onNavigate ? "button" : undefined}
+                tabIndex={s.onNavigate ? 0 : undefined}
+                onClick={s.onNavigate}
+                onKeyDown={(e) => {
+                  if (s.onNavigate && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    s.onNavigate();
+                  }
+                }}
+                title={s.onNavigate ? "Abrir Relatório de Vendas (Vendas × CRM)" : undefined}
+                className={`flex min-h-[72px] items-center justify-center px-8 text-center ${
+                  s.onNavigate
+                    ? "cursor-pointer outline-none transition-[filter] hover:brightness-95 focus-visible:brightness-95"
+                    : ""
+                }`}
                 style={{ clipPath: clip, background: s.color }}
               >
                 <div className="leading-tight">
                   <p className="text-xl font-extrabold text-slate-800">
                     {fmt(s.value)}
                   </p>
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-600">
+                  <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-slate-600">
                     {s.label}
+                    {s.onNavigate && <span aria-hidden>↗</span>}
                   </p>
                 </div>
               </div>

@@ -54,6 +54,8 @@ import {
 } from "@/lib/marketing";
 import { buildUnifiedContacts, phoneKey } from "@/lib/crossref";
 import { buildMenuMap, computeComercial } from "@/lib/comercial";
+import { buildComparison } from "@/lib/relatorioVendas";
+import RelatorioVendasTab from "@/components/tabs/RelatorioVendasTab";
 import { useOverrides } from "@/lib/overrides";
 import { computeProductRevenue } from "@/lib/products";
 import {
@@ -69,6 +71,7 @@ import { useRouter } from "next/navigation";
 const TAB_LABELS = {
   "visao-geral": "Painel V4",
   negocios: "Negócios",
+  "relatorio-vendas": "Relatório de Vendas",
   produtos: "Produtos",
   campanhas: "Campanhas",
   relatorios: "Relatórios",
@@ -89,7 +92,7 @@ function excludeKey(row) {
 
 
 export default function DashboardPage() {
-  const { data, leadsSdr, campaignsData, menu, funilDiario, loading, error, lastUpdated } =
+  const { data, leadsSdr, campaignsData, menu, vendas, funilDiario, loading, error, lastUpdated } =
     useDashboardData();
 
   // RBAC / Data Siloing: perfil do usuário (admin vê tudo; unit vê só sua pipeline).
@@ -143,8 +146,10 @@ export default function DashboardPage() {
   const {
     winDates,
     excluded: excludedMap,
+    confirmedSales,
     setWinDate,
     toggleExclude,
+    toggleConfirmSale,
   } = useOverrides();
   // Set das chaves excluídas (mantém a API .size/.has usada abaixo).
   const excluded = useMemo(
@@ -506,6 +511,13 @@ export default function DashboardPage() {
     const eff = isUnit ? { ...filters, pipeline: unitPipeline } : filters;
     return computeComercial(funilDiario, menuMap, eff);
   }, [funilDiario, menuMap, filters, isUnit, unitPipeline]);
+
+  // COMPARATIVO Relatório de Vendas × CRM (aba Relatório de Vendas). Cruza por
+  // CPF/telefone/nome exato, respeita o filtro de DATA (data do relatório).
+  const comparativoVendas = useMemo(
+    () => buildComparison(vendas, data, menuMap, filters, confirmedSales),
+    [vendas, data, menuMap, filters, confirmedSales]
+  );
 
   // Resumo executivo da aba Relatórios. Usa a MESMA base do menu principal:
   // leads ÚNICOS do CRM (deduplicados por contato) sobre o filteredData já
@@ -899,9 +911,11 @@ export default function DashboardPage() {
                               },
                               {
                                 // Ganhos pela DATA DO GANHO (consistente com o card).
+                                // Clicável -> abre o Relatório de Vendas (Vendas × CRM).
                                 label: "Ganhos",
                                 value: wonMetrics.vendasRealizadas,
                                 color: "#6ee7b7",
+                                onNavigate: () => setActiveTab("relatorio-vendas"),
                               },
                             ]}
                           />
@@ -934,6 +948,16 @@ export default function DashboardPage() {
                   onToggleExclude={toggleExclude}
                   winDates={winDates}
                   onSetWinDate={setWinDate}
+                />
+              )}
+
+              {/* === RELATÓRIO DE VENDAS (Vendas × CRM) === */}
+              {activeTab === "relatorio-vendas" && (
+                <RelatorioVendasTab
+                  rows={comparativoVendas.rows}
+                  stats={comparativoVendas.stats}
+                  canConfirm={isAdmin}
+                  onToggleConfirm={toggleConfirmSale}
                 />
               )}
 
